@@ -30,7 +30,28 @@ In this preview pod everything runs locally: FastAPI on :8001, React on :3000, M
 - Frontend: React 19 + CRA + craco, Radix UI, Tailwind, Recharts, react-router 7
 - Deploy: Dockerfile (multi-stage), `fly.toml`, optional `render.yaml`
 
-## What's been implemented (2026-05-25 — restore session)
+## What's been implemented (2026-05-25 — restore + Emergent-removal session)
+- Re-cloned `tinysecrets/Wahlah.com` from GitHub into a fresh Emergent pod where `/app` only had the default scaffold.
+- Preserved Emergent's `/app/.git`, `/app/.emergent`, `/app/backend/.env` (MONGO_URL+DB_NAME), `/app/frontend/.env` (REACT_APP_BACKEND_URL).
+- Regenerated full backend `.env` with dev-safe values plus the real production keys provided by the user.
+- Installed missing Python deps: `python-dotenv`, `python-multipart`, `resend`, `playwright`, `pyotp`, `qrcode`, `email-validator`, `dnspython`. Installed Playwright Chromium and symlinked `/root/.cache/ms-playwright → /pw-browsers`.
+- Installed missing frontend dep `dompurify`. Frontend compiles clean.
+- **Fully ripped out `emergentintegrations` per user request** (no royalty/payment ties):
+  - New `backend/services/stripe_client.py` — thin async wrapper around the native `stripe` Python SDK exposing the same `StripeCheckout / CheckoutSessionRequest / handle_webhook` surface server.py was calling. Stripe is now fully native.
+  - Removed `emergentintegrations==0.1.0` from `backend/requirements.txt` and root `requirements.txt`.
+  - Removed `--extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/` (Emergent private PyPI) from `/app/Dockerfile`.
+  - Deleted helper scripts `generate_mascot.py` + `generate_genie.py` (mascot PNGs already shipped in `backend/static/mascots/`).
+  - Boss Genie status check now reads `OPENAI_API_KEY` / `CEREBRAS_API_KEY` / `VENICE_API_KEY` / `OLLAMA_BASE_URL` instead of `EMERGENT_LLM_KEY`.
+  - Removed `@emergentbase/visual-edits` from `frontend/package.json` via `yarn remove`.
+  - Final repo-wide scan: only one match remaining is a docstring comment in `stripe_client.py`. Zero runtime ties.
+- **Live integrations verified end-to-end**:
+  - Cerebras Boss Genie chat returns real LLM responses ("Hey Boss — what's the move today?") on `qwen-3-235b-a22b-instruct-2507`.
+  - Resend, Cloudflare keys wired and visible to Boss Genie's deploy-info tool.
+  - Stripe: pod test key in dev. **NEEDS `sk_live_…` secret key for production** — user sent the publishable `pk_live_…` only (saved separately as `STRIPE_PUBLISHABLE_KEY`).
+- Admin auto-seed verified: `admin@wahlah.com` / `WahLahAdmin2026$` → JWT 200.
+- All supervisor services green: backend (8001), frontend (3000), mongodb, nginx-code-proxy.
+
+## What's been implemented (2026-05-22 — previous session)
 - Re-cloned `tinysecrets/Wahlah.com` from GitHub into a fresh Emergent pod where `/app` only had the default scaffold.
 - Preserved Emergent's `/app/.git`, `/app/.emergent`, `/app/backend/.env` (MONGO_URL+DB_NAME), `/app/frontend/.env` (REACT_APP_BACKEND_URL).
 - Regenerated full backend `.env` with dev-safe values: `JWT_SECRET`, `STRIPE_API_KEY=sk_test_emergent` (pod test key), Fernet `PROXY_ENCRYPTION_KEY`, `EMERGENT_LLM_KEY` (Universal Key), `BLOCKED_STATES`, KYC/AML thresholds, cookie security flags, `CORS_ORIGINS=*`.

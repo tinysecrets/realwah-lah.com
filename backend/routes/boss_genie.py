@@ -268,7 +268,12 @@ def build_boss_router(db, get_admin_user):
             "env": {
                 "has_stripe_live": os.environ.get("STRIPE_API_KEY", "").startswith(("sk_live", "rk_live")),
                 "has_resend": bool(os.environ.get("RESEND_API_KEY")),
-                "has_llm_key": bool(os.environ.get("EMERGENT_LLM_KEY")),
+                "has_llm_key": bool(
+                    os.environ.get("OPENAI_API_KEY")
+                    or os.environ.get("CEREBRAS_API_KEY")
+                    or os.environ.get("VENICE_API_KEY")
+                    or os.environ.get("OLLAMA_BASE_URL")
+                ),
                 "frontend_url": os.environ.get("FRONTEND_URL", ""),
             },
             "timestamp": datetime.now(timezone.utc).isoformat(),

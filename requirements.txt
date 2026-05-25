@@ -15,7 +15,6 @@ httpx==0.28.1
 requests==2.32.3
 sentry-sdk[fastapi]==2.19.2
 playwright==1.49.1
-emergentintegrations
 stripe==11.4.1
 resend==2.5.1
 sentry-sdk[fastapi]==2.19.2
