@@ -1,0 +1,63 @@
+name: Fly Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: fly-deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy app
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Verify Fly token
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          if [ -z "${FLY_API_TOKEN}" ]; then
+            echo "::error::Missing GitHub secret FLY_API_TOKEN. Create a Fly token, then add it at GitHub repo Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+      - name: Deploy to Fly
+        timeout-minutes: 12
+        run: flyctl deploy --remote-only --config fly.toml
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Verify production health
+        run: |
+          for url in \
+            https://wah-lah.fly.dev/api/health \
+            https://wah-lah.com/api/health
+          do
+            echo "Checking ${url}"
+            curl --fail --show-error --silent --max-time 30 "${url}"
+            echo
+          done
+
+      - name: Diagnose Fly runtime on failure
+        if: failure()
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set +e
+          echo "== fly status =="
+          flyctl status --app wah-lah
+          echo
+          echo "== fly machine list =="
+          flyctl machine list --app wah-lah
+          echo
+          echo "== fly checks =="
+          flyctl checks list --app wah-lah
+          echo
+          echo "== recent fly logs =="
+          flyctl logs --app wah-lah --no-tail

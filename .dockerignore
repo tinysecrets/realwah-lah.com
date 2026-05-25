@@ -1,0 +1,42 @@
+.git
+.gitignore
+.dockerignore
+.github
+.vscode
+.idea
+.DS_Store
+
+# Python
+**/__pycache__
+**/*.pyc
+**/.venv
+**/venv
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+
+# Node / frontend (we don't ship the frontend in the backend image)
+frontend/node_modules
+frontend/build
+frontend/.cache
+genie-sidekick
+
+# Logs / local data
+*.log
+**/test_reports
+**/tests/__snapshots__
+
+# Memory / docs (not needed at runtime)
+memory
+*.md
+!backend/**/*.md
+
+# Local env files — Fly secrets / Render env vars override these
+.env
+**/.env
+**/.env.*
+!**/.env.example
+
+# Temp / uploads
+/tmp
+**/uploads
