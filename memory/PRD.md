@@ -30,6 +30,21 @@ In this preview pod everything runs locally: FastAPI on :8001, React on :3000, M
 - Frontend: React 19 + CRA + craco, Radix UI, Tailwind, Recharts, react-router 7
 - Deploy: Dockerfile (multi-stage), `fly.toml`, optional `render.yaml`
 
+## What's been implemented (2026-05-25 — REVENUE ENGINE LIVE 💰)
+- **The house is now a house.** Discovered the platform had **zero monetization logic** — `credits = amount` (1:1 dollar-for-dollar with no skim). Built and wired the full revenue stack in one pass:
+  - **`services/revenue.py`** — central fee math + ledger + live-tunable rates (cashtag, giftcard, btc). Persists in `revenue_settings` collection, reads from env as fallback. Caps every rate at 50% so admin can't accidentally brick deposits.
+  - **Cash App / Chime fee (12% default)** wired into NEW endpoint `POST /api/admin/cashtag/reconcile` — admin verifies inbound `$jrs092393` payment, calls endpoint, system credits NET to player wallet and writes fee to `revenue_ledger`. Also patched the legacy `/admin/middleware/inject` with same fee logic when `source=cashapp|chime|cashtag`.
+  - **Gift card fee (5% default)** wired into `POST /api/giftcard/request` (`routes/gift_cards.py`) — player asks for 25 credits → only $23.75 worth of card gets fulfilled, $1.25 lands in ledger.
+  - **BTC redemption fee (10% default)** wired into `POST /api/redemption/request` — split gross/net at quote time, stamped onto the redemption document so admin payout matches what we promised.
+  - **Admin dashboard endpoints** in `routes/revenue_admin.py`:
+    - `GET /api/admin/revenue/summary?days=N` — aggregated P&L, by_kind breakdown, all-time totals
+    - `GET /api/admin/revenue/ledger` — raw rows
+    - `GET / POST /api/admin/revenue/settings` — live-tune rates without redeploy
+  - **Fee disclosure** baked into player-facing endpoints: `/payment/card-info` now returns `fee_rate` + `fee_disclosure`; `/giftcard/catalog` same. No hidden fees → no chargebacks → Stripe account stays alive.
+- **Money smoke test passed**: simulated 3 reconciles ($25, $50, $200 across cashapp+chime), revenue ledger shows `$33 house keep on $275 gross`. Live-bumped cashtag rate to 15% mid-session, processed a $100 deposit, kept $15, reset back to 12% — all without restart.
+- **Daily ops playbook** written to `/app/MONEY_PLAYBOOK.md` — Justin can read it once and run his business from there. Includes realistic income math at 100/500/2000/5000 active players.
+- **Clean startup**: Sugar Sweeps Playwright bridge now properly skips when `SUGAR_SWEEPS_USERNAME` is empty. Boot log is silent.
+
 ## What's been implemented (2026-05-25 — deploy-prep session pt.2)
 - **Fixed CRITICAL Stripe bug** flagged in iteration_7 test report: `services/stripe_client.py` was raising bare `stripe.error.AuthenticationError` → 500. Wrapped `create_checkout_session` + `get_checkout_status` in try/except → translate to `HTTPException(502, ...)` with a player-friendly message ("Card payments temporarily unavailable, please use Cash App, Chime, or crypto"). Re-ran iter7 pytest: `test_checkout_create_does_not_500` → PASS. Backend boots clean.
 - **Cashtag wired**: `CARD_PAYMENT_TAG=$jrs092393` in env. Verified `GET /api/payment/card-info` returns `{"tag":"$jrs092393","instructions":"Send payment via Cash App or Chime ..."}`. Same tag covers Chime per user instruction.

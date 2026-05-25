@@ -58,8 +58,18 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
     # ---- USER ENDPOINTS ----
     @router.get("/giftcard/catalog")
     async def giftcard_catalog():
-        """Public catalog of supported brands + min/max per-card caps."""
-        return [{"id": k, **v} for k, v in SUPPORTED_BRANDS.items()]
+        """Public catalog of supported brands + min/max per-card caps + house fee disclosure."""
+        from services.revenue import get_rates
+        rates = await get_rates(db)
+        return {
+            "brands": [{"id": k, **v} for k, v in SUPPORTED_BRANDS.items()],
+            "fee_rate": rates["giftcard"],
+            "fee_disclosure": (
+                f"A {int(rates['giftcard']*100)}% processing fee is applied to gift card "
+                f"redemptions. Example: redeeming 25 credits delivers a "
+                f"${round(25 * (1 - rates['giftcard']), 2)} gift card."
+            ),
+        }
 
     @router.post("/giftcard/request")
     async def giftcard_request(payload: GiftCardRequestIn, user=Depends(get_current_user)):
@@ -107,6 +117,15 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
         if res.modified_count == 0:
             raise HTTPException(status_code=400, detail="Insufficient game credits.")
 
+        # ---------- HOUSE FEE ----------
+        # Player redeems `amount` credits; we deliver a gift card worth
+        # `net_usd` and keep `fee_usd` as house revenue.
+        from services.revenue import get_rates, apply_fee, record_revenue
+        rates = await get_rates(db)
+        split = apply_fee(amount, rates["giftcard"])
+        net_usd = split["net_usd"]
+        fee_usd = split["fee_usd"]
+
         rid = str(uuid.uuid4())
         now = datetime.now(timezone.utc).isoformat()
         doc = {
@@ -115,8 +134,11 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
             "user_email": user.get("email"),
             "brand": payload.brand,
             "brand_label": brand_cfg["label"],
-            "amount_usd": amount,
-            "amount_credits": amount,
+            "amount_usd": net_usd,                       # ← amount the player actually receives
+            "amount_credits": amount,                    # ← credits debited
+            "gross_usd": amount,                         # for ledger reconciliation
+            "fee_usd": fee_usd,
+            "fee_rate": rates["giftcard"],
             "recipient_email": payload.recipient_email,
             "game_id": payload.game_id,
             "status": "pending",             # pending → fulfilled | rejected
@@ -127,6 +149,20 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
             "notes": None,
         }
         await db.gift_card_redemptions.insert_one(doc)
+
+        # Revenue ledger entry
+        await record_revenue(
+            db,
+            kind="giftcard",
+            user_id=str(uid),
+            gross_usd=amount,
+            fee_usd=fee_usd,
+            net_usd=net_usd,
+            rate=rates["giftcard"],
+            ref_id=rid,
+            ref_kind="gift_card",
+            metadata={"brand": payload.brand, "recipient_email": payload.recipient_email},
+        )
 
         # AML tracking — log just like BTC path
         try:

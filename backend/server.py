@@ -511,6 +511,17 @@ async def create_redemption_request(data: RedemptionRequestModel, request: Reque
 
     amount_usd = calculate_redemption_usd(data.game_credits)
 
+    # ---------- HOUSE FEE (BTC redemption) ----------
+    # Player asks for N credits → we pay out `net_usd` worth of BTC and keep
+    # `fee_usd` as house revenue. KYC tiers and AML reporting still key off
+    # the GROSS amount (player intent), not the net — that's the safer side
+    # for compliance auditing.
+    from services.revenue import get_rates, apply_fee, record_revenue
+    _rev_rates = await get_rates(db)
+    _split = apply_fee(amount_usd, _rev_rates["btc"])
+    net_payout_usd = _split["net_usd"]
+    fee_usd = _split["fee_usd"]
+
     # Gate 1: geoblock
     client_ip = client_ip_from_request(request)
     blocked, geo_reason, detected_state = await check_geoblock(client_ip)
@@ -589,11 +600,43 @@ async def create_redemption_request(data: RedemptionRequestModel, request: Reque
         metadata={"redemption_id": redemption_id, "btc_address": data.btc_address, "credits": data.game_credits},
     )
 
+    # Stamp the redemption with the fee breakdown so admin payout matches what
+    # we already promised the player and the ledger.
+    try:
+        await db["redemption_requests"].update_one(
+            {"_id": ObjectId(redemption_id)},
+            {"$set": {
+                "gross_usd": amount_usd,
+                "net_payout_usd": net_payout_usd,
+                "fee_usd": fee_usd,
+                "fee_rate": _rev_rates["btc"],
+            }},
+        )
+    except Exception as e:
+        logger.warning(f"Could not stamp fee on redemption {redemption_id}: {e}")
+
+    # Revenue ledger entry — house keeps `fee_usd` on this redemption
+    await record_revenue(
+        db,
+        kind="btc",
+        user_id=user["id"],
+        gross_usd=amount_usd,
+        fee_usd=fee_usd,
+        net_usd=net_payout_usd,
+        rate=_rev_rates["btc"],
+        ref_id=redemption_id,
+        ref_kind="btc_redemption",
+        metadata={"btc_address": data.btc_address, "credits": data.game_credits},
+    )
+
     return {
         "success": True,
         "message": message + " Held pending compliance officer review.",
         "redemption_id": redemption_id,
-        "amount_usd": amount_usd,
+        "amount_usd": amount_usd,           # gross (credits → USD before fee)
+        "net_payout_usd": net_payout_usd,   # what player actually receives in BTC value
+        "fee_usd": fee_usd,                 # house keep
+        "fee_rate": _rev_rates["btc"],
         "status": "hold_admin_review",
     }
 
@@ -1053,9 +1096,18 @@ async def get_crypto_info():
 
 @api_router.get("/payment/card-info")
 async def get_card_info():
+    from services.revenue import get_rates
+    rates = await get_rates(db)
+    keep = rates["cashtag"]
     return {
         "tag": os.environ.get("CARD_PAYMENT_TAG", "$SugarCitySweeps"),
-        "instructions": "Send payment via Cash App or Chime and include your game tag in the note"
+        "instructions": "Send payment via Cash App or Chime and include your game tag in the note",
+        "fee_rate": keep,
+        "fee_disclosure": (
+            f"A {int(keep*100)}% processing fee is applied to Cash App / Chime deposits. "
+            f"Example: $25 sent = {round(25 * (1 - keep), 2)} game credits. "
+            "Use a card deposit for full-value credit."
+        ),
     }
 
 # User Transactions
@@ -1401,6 +1453,11 @@ async def manual_credit_injection(request: Request, data: dict):
     game_id = data.get("game_id")
     credits = data.get("credits")
     reason = data.get("reason", "Manual admin injection")
+    # When admin is reconciling a Cash App / Chime deposit, `source` tells us
+    # to apply the house keep fee. For any other reason (bonus, refund) the
+    # admin can pass apply_fee=false explicitly.
+    source = (data.get("source") or "").lower()
+    apply_house_fee = bool(data.get("apply_fee", source in ("cashapp", "chime", "cashtag")))
     
     if not all([platform_id, user_id, player_id, credits]):
         raise HTTPException(status_code=400, detail="Missing required fields")
@@ -1411,39 +1468,83 @@ async def manual_credit_injection(request: Request, data: dict):
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # Allocate credits via Playwright
+        # ---------- HOUSE FEE (Cash App / Chime convenience fee) ----------
+        from services.revenue import get_rates as _rget, apply_fee as _rapply, record_revenue as _rrec
+        gross_amount = float(credits)
+        fee_amount = 0.0
+        net_amount = gross_amount
+        applied_rate = 0.0
+        if apply_house_fee:
+            _rates = await _rget(db)
+            applied_rate = _rates["cashtag"]
+            _split = _rapply(gross_amount, applied_rate)
+            net_amount = _split["net_usd"]
+            fee_amount = _split["fee_usd"]
+        
+        # Allocate credits via Playwright (use NET amount — what the player actually gets)
         success, msg = await middleware_manager.allocate_credits(
             user_id=user_id,
             game_id=game_id or platform_id,
             platform_id=platform_id,
             player_id=player_id,
-            amount_usd=credits  # 1:1 ratio for manual injections
+            amount_usd=net_amount
         )
         
         if not success:
             raise HTTPException(status_code=400, detail=msg)
         
-        # Create manual grant record for audit trail
+        # Revenue ledger entry — house keeps `fee_amount` on this deposit
+        if apply_house_fee and fee_amount > 0:
+            await _rrec(
+                db,
+                kind="cashtag",
+                user_id=user_id,
+                gross_usd=gross_amount,
+                fee_usd=fee_amount,
+                net_usd=net_amount,
+                rate=applied_rate,
+                ref_id=None,
+                ref_kind="cashtag_deposit",
+                metadata={
+                    "source": source or "cashapp",
+                    "player_id": player_id,
+                    "platform_id": platform_id,
+                    "reason": reason,
+                },
+            )
+        
+        # Create manual grant record for audit trail (use NET — credits actually delivered)
         if currency_service:
             await currency_service.grant_bonus_credits(
                 user_id=user_id,
                 user_email=user["email"],
-                game_credits=int(credits),
+                game_credits=int(net_amount),
                 grant_type=BonusGrantType.ADMIN_GRANT,
                 metadata={
                     "platform_id": platform_id,
                     "player_id": player_id,
                     "reason": reason,
-                    "manual_injection": True
-                }
+                    "manual_injection": True,
+                    "gross_amount": gross_amount,
+                    "fee_amount": fee_amount,
+                    "fee_rate": applied_rate,
+                    "source": source or None,
+                },
             )
-        
-        logger.info(f"👑 ADMIN MANUAL INJECTION: {player_id} received {credits} credits on {platform_id}")
-        
+
+        logger.info(
+            f"👑 ADMIN INJECTION: {player_id} got {net_amount} credits "
+            f"(gross={gross_amount}, fee={fee_amount}@{applied_rate*100:.0f}%) on {platform_id}"
+        )
+
         return {
             "success": True,
-            "message": f"Injected {credits} credits to {player_id}",
-            "platform": platform_id
+            "message": f"Injected {net_amount} credits to {player_id}",
+            "platform": platform_id,
+            "gross_usd": gross_amount,
+            "net_credits": net_amount,
+            "fee_usd": fee_amount,
+            "fee_rate": applied_rate,
         }
     
     except HTTPException:
@@ -1451,6 +1552,100 @@ async def manual_credit_injection(request: Request, data: dict):
     except Exception as e:
         logger.error(f"Manual injection error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Injection failed: {str(e)}")
+
+
+@api_router.post("/admin/cashtag/reconcile")
+async def admin_cashtag_reconcile(request: Request):
+    """
+    Admin reconciles a Cash App / Chime deposit.
+
+    Player sent USD to $jrs092393 → admin verifies → calls this with
+    {user_id, amount_usd, source: 'cashapp'|'chime', note}.
+
+    Applies the CASHTAG_KEEP_RATE house fee, credits the NET to the player's
+    wallet, writes the fee to the revenue ledger.
+    """
+    admin = await get_admin_user(request)
+    data = await request.json()
+
+    user_id = data.get("user_id")
+    amount_usd = data.get("amount_usd")
+    source = (data.get("source") or "cashapp").lower()
+    note = data.get("note", "")
+    apply_house_fee = bool(data.get("apply_fee", True))
+
+    if not user_id or amount_usd is None:
+        raise HTTPException(status_code=400, detail="user_id and amount_usd are required")
+    try:
+        gross = float(amount_usd)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="amount_usd must be a number")
+    if gross <= 0:
+        raise HTTPException(status_code=400, detail="amount_usd must be positive")
+    if source not in ("cashapp", "chime", "cashtag"):
+        raise HTTPException(status_code=400, detail="source must be cashapp, chime, or cashtag")
+
+    try:
+        user_doc = await db.users.find_one({"_id": ObjectId(user_id)})
+    except Exception:
+        user_doc = await db.users.find_one({"id": user_id})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    from services.revenue import get_rates as _rget, apply_fee as _rapply, record_revenue as _rrec
+    import uuid as _uuid
+    rates = await _rget(db)
+    rate = rates["cashtag"] if apply_house_fee else 0.0
+    split = _rapply(gross, rate)
+    net_credits = split["net_usd"]
+    fee_usd = split["fee_usd"]
+
+    await db.users.update_one(
+        {"_id": user_doc["_id"]},
+        {"$inc": {"game_credits": net_credits}},
+    )
+
+    tx_id = str(_uuid.uuid4())
+    await db.payment_transactions.insert_one({
+        "id": tx_id,
+        "user_id": str(user_doc["_id"]),
+        "user_email": user_doc.get("email"),
+        "kind": "cashtag_deposit",
+        "source": source,
+        "gross_usd": gross,
+        "net_credits": net_credits,
+        "fee_usd": fee_usd,
+        "fee_rate": rate,
+        "note": note,
+        "reconciled_by": admin.get("email"),
+        "status": "completed",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+    if fee_usd > 0:
+        await _rrec(
+            db,
+            kind="cashtag",
+            user_id=str(user_doc["_id"]),
+            gross_usd=gross,
+            fee_usd=fee_usd,
+            net_usd=net_credits,
+            rate=rate,
+            ref_id=tx_id,
+            ref_kind="cashtag_deposit",
+            metadata={"source": source, "note": note, "reconciled_by": admin.get("email")},
+        )
+
+    return {
+        "success": True,
+        "transaction_id": tx_id,
+        "gross_usd": gross,
+        "net_credits": net_credits,
+        "fee_usd": fee_usd,
+        "fee_rate": rate,
+        "user_balance_after": user_doc.get("game_credits", 0) + net_credits,
+    }
+
 
 @api_router.post("/admin/middleware/restart/{platform_id}")
 async def restart_platform_bot(platform_id: str, request: Request):
@@ -1524,6 +1719,12 @@ async def responsible_gaming():
         raise HTTPException(status_code=404, detail="Responsible Gaming page not found")
 
 app.include_router(api_router)
+
+# Revenue admin router — fee rates + P&L ledger (Justin's money dashboard)
+from routes.revenue_admin import register_revenue_admin_routes  # noqa: E402
+_revenue_admin_router = APIRouter(prefix="/api")
+register_revenue_admin_routes(_revenue_admin_router, db, get_admin_user)
+app.include_router(_revenue_admin_router)
 
 # Feature extensions router (password reset, 2FA, promo codes, referrals, VIP tiers,
 # support tickets, enhanced analytics)
