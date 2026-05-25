@@ -30,6 +30,13 @@ In this preview pod everything runs locally: FastAPI on :8001, React on :3000, M
 - Frontend: React 19 + CRA + craco, Radix UI, Tailwind, Recharts, react-router 7
 - Deploy: Dockerfile (multi-stage), `fly.toml`, optional `render.yaml`
 
+## What's been implemented (2026-05-25 — deploy-prep session pt.2)
+- **Fixed CRITICAL Stripe bug** flagged in iteration_7 test report: `services/stripe_client.py` was raising bare `stripe.error.AuthenticationError` → 500. Wrapped `create_checkout_session` + `get_checkout_status` in try/except → translate to `HTTPException(502, ...)` with a player-friendly message ("Card payments temporarily unavailable, please use Cash App, Chime, or crypto"). Re-ran iter7 pytest: `test_checkout_create_does_not_500` → PASS. Backend boots clean.
+- **Cashtag wired**: `CARD_PAYMENT_TAG=$jrs092393` in env. Verified `GET /api/payment/card-info` returns `{"tag":"$jrs092393","instructions":"Send payment via Cash App or Chime ..."}`. Same tag covers Chime per user instruction.
+- **Quiet startup**: Sugar Sweeps Playwright bridge now skips boot when `SUGAR_SWEEPS_USERNAME`/`PASSWORD` env vars aren't set, logging an INFO line instead of error-spamming. Operator can enable per-deploy via Fly secrets.
+- **Production secrets staged in local `.env`** for verification (will be moved to Fly secrets, not committed): Cerebras (LIVE — verified `provider=cerebras`, model=qwen-3-235b-a22b-instruct-2507, response: "Hey Boss, magic's ready."), Resend, Cloudflare API token + Zone ID. Stripe still on pod test key because user sent publishable (`pk_live_...`), not secret (`sk_live_...`) — saved publishable separately as `STRIPE_PUBLISHABLE_KEY`.
+- **Created `/app/DEPLOY_QUICKSTART.md`** — plain-English answers to everything: which MongoDB URL is which, where Fly secrets actually live, exactly which services are needed (Fly + Atlas + Cloudflare; NOT Firebase, NOT Render, NOT Vercel), the exact `flyctl secrets set` command block, and the 9-step launch order.
+
 ## What's been implemented (2026-05-25 — restore + Emergent-removal session)
 - Re-cloned `tinysecrets/Wahlah.com` from GitHub into a fresh Emergent pod where `/app` only had the default scaffold.
 - Preserved Emergent's `/app/.git`, `/app/.emergent`, `/app/backend/.env` (MONGO_URL+DB_NAME), `/app/frontend/.env` (REACT_APP_BACKEND_URL).
