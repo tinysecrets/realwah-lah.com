@@ -32,7 +32,7 @@ import string
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict
-from emergentintegrations.payments.stripe.checkout import StripeCheckout, CheckoutSessionRequest
+from services.stripe_client import StripeCheckout, CheckoutSessionRequest
 
 # Game Middleware imports
 from middleware.game_middleware_manager import GameMiddlewareManager
