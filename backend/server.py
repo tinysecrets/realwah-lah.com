@@ -1835,13 +1835,22 @@ async def startup_event():
         logger.error(f"Failed to initialize currency service: {str(e)}")
     
     # Initialize Sugar Sweeps Bridge (Master Tank for P2P automation)
+    # SKIPS gracefully when SUGAR_SWEEPS_USERNAME / PASSWORD are not set, so
+    # cold-boot is quiet on Fly until the operator provides distributor creds.
     global sugar_sweeps_bridge
-    try:
-        sugar_sweeps_bridge = SugarSweepsBridge()
-        asyncio.create_task(initialize_sugar_sweeps_bridge())
-        logger.info("Sugar Sweeps Bridge initialization started in background")
-    except Exception as e:
-        logger.warning(f"Sugar Sweeps Bridge not available: {str(e)}")
+    if os.environ.get("SUGAR_SWEEPS_USERNAME") and os.environ.get("SUGAR_SWEEPS_PASSWORD"):
+        try:
+            sugar_sweeps_bridge = SugarSweepsBridge()
+            asyncio.create_task(initialize_sugar_sweeps_bridge())
+            logger.info("Sugar Sweeps Bridge initialization started in background")
+        except Exception as e:
+            logger.warning(f"Sugar Sweeps Bridge not available: {str(e)}")
+            sugar_sweeps_bridge = None
+    else:
+        logger.info(
+            "Sugar Sweeps Bridge skipped (SUGAR_SWEEPS_USERNAME / PASSWORD not set). "
+            "P2P transfers will use the HTTP distributor pool via /api/distributor-pool/* instead."
+        )
         sugar_sweeps_bridge = None
     
     # Write test credentials

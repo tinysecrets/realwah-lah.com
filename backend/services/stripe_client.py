@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
 import stripe
+from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -87,14 +88,31 @@ class StripeCheckout:
                 metadata=req.metadata or {},
             )
 
-        session = await asyncio.to_thread(_create)
+        try:
+            session = await asyncio.to_thread(_create)
+        except stripe.error.AuthenticationError as e:
+            logger.error(f"Stripe authentication failed: {e}")
+            raise HTTPException(
+                status_code=502,
+                detail="Card payments are temporarily unavailable. Please use Cash App, Chime, or crypto. (admin: set STRIPE_API_KEY to a valid sk_live_/sk_test_ secret key in Fly secrets)",
+            )
+        except stripe.error.StripeError as e:
+            logger.error(f"Stripe error creating session: {e}")
+            raise HTTPException(status_code=502, detail=f"Payment provider error: {str(e)[:200]}")
         return CheckoutSession(url=session.url, session_id=session.id)
 
     async def get_checkout_status(self, session_id: str) -> CheckoutStatus:
         def _retrieve() -> Any:
             return stripe.checkout.Session.retrieve(session_id)
 
-        s = await asyncio.to_thread(_retrieve)
+        try:
+            s = await asyncio.to_thread(_retrieve)
+        except stripe.error.AuthenticationError as e:
+            logger.error(f"Stripe authentication failed on status check: {e}")
+            raise HTTPException(status_code=502, detail="Payment provider not configured.")
+        except stripe.error.StripeError as e:
+            logger.error(f"Stripe error retrieving session: {e}")
+            raise HTTPException(status_code=502, detail=f"Payment provider error: {str(e)[:200]}")
         return CheckoutStatus(
             status=s.status or "open",
             payment_status=s.payment_status or "unpaid",
