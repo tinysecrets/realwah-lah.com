@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /boss
+
+Sitemap: https://wah-lah.com/sitemap.xml
