@@ -1,0 +1,49 @@
+{
+  "summary": "Iteration 7 — post-Emergent-migration backend smoke for WAH-LAH. Ran 17 tests against https://wahlah-app.preview.emergentagent.com via pytest. 13 PASS, 1 FAIL (Stripe checkout/create returns 500 instead of graceful 4xx on invalid sk_test_emergent key — real bug), 3 SKIPPED (geoblock test path inconclusive in this pod, KYC gate is behind the BTC master kill-switch which is currently OFF). Verified: admin login + JWT cookie, /auth/me, 7 seeded games (Fire Kirin, Juwa, Juwa 2, Ultra Panda, Panda Master, Orion Stars, Game Vault), payment/card-info tag == '$jrs092393' EXACT, payment/crypto-info, /boss/providers (cerebras enabled, ollama+venice disabled, default=cerebras), /boss/chat round-trips real Cerebras (provider=cerebras, model=qwen-3-235b-a22b-instruct-2507, returned 'Hey Boss, magic\\u2019s ready.'), AMOE 100-credit grant + 24h cooldown enforced, gift-card request creates pending redemption, admin/users + admin/transactions + ext/giftcard/admin/pending all return arrays, non-admin gets 403, /api/health <2s no-DB.",
+  "backend_issues": {
+    "critical": [
+      {
+        "endpoint": "POST /api/checkout/create",
+        "issue": "Returns 500 Internal Server Error with no body when Stripe rejects the API key. Brief explicitly says 'must NOT 500; should return a URL even on test key, OR fail gracefully with clear message'. Backend logs show raw stripe._error.AuthenticationError: 'Invalid API Key provided: sk_test_****gent' bubbling out of services/stripe_client.py:74 (create_checkout_session). The wrapper does not catch stripe.error.* exceptions.",
+        "priority": "CRITICAL"
+      }
+    ],
+    "minor": [
+      {
+        "endpoint": "POST /api/boss/chat",
+        "issue": "Intermittent 502 with upstream 429 'queue_exceeded' from Cerebras free-tier. Not a backend bug — integration is wired correctly (verified working reply on retry). Backend returns 502 wrapping the upstream message, which is reasonable. Consider exponential-backoff retry on 429 server-side to smooth over Cerebras queue blips."
+      }
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter7_postemergent.py",
+    "/app/test_reports/pytest/iter7_postemergent.xml"
+  ],
+  "action_items": [
+    "[CRITICAL — blocks deploy] Wrap stripe.checkout.Session.create / .retrieve calls in services/stripe_client.py with try/except stripe.error.StripeError → raise HTTPException(status_code=502, detail=...) OR a structured 400 with a JSON body like {'error':'stripe_unavailable','message':'Payment provider rejected the key. Contact admin.'}. Currently sk_test_emergent is NOT a real Stripe test key and Stripe returns AuthenticationError → uncaught → FastAPI 500. The real sk_live_ key is still pending from user; the wrapper must degrade gracefully until then.",
+    "[After sk_live_ arrives] Re-run test_checkout_create_does_not_500 — should return 200 with a real checkout.stripe.com URL.",
+    "[Optional resilience] Add a single retry-on-429 with ~1s backoff inside boss_chat upstream call (services/cerebras or routes/boss_genie) so transient queue_exceeded doesn't bubble to admins as 502.",
+    "[Optional] Set STRIPE_API_KEY validity check at app boot — log a loud WARNING (not crash) if the key is the literal string 'sk_test_emergent' so QA/ops know live payments will fail until rotated."
+  ],
+  "critical_code_review_comments": [
+    "services/stripe_client.py: create_checkout_session and get_checkout_status both call stripe SDK via asyncio.to_thread but neither catches stripe.error.StripeError. ANY Stripe-side error (auth, rate limit, validation) becomes a 500. Wrap and translate to HTTPException.",
+    "server.py is now 1866 lines — repeat of iter6 comment, still violates the 700-line guideline. Splitting into routers (auth, games, amoe, payments, admin) would let unit tests target each surface.",
+    "Cookie secure flag is still env-driven via COOKIE_SECURE. Confirm COOKIE_SECURE=true is set in the deployed env (.env shows only the default). Without it, browsers will silently drop the access_token cookie over HTTPS preview with SameSite=lax.",
+    "Geoblock soft-fails OPEN when ipapi.co times out (services/compliance/geoblock.py:48). Document this trade-off in the launch checklist and require attorney sign-off before production launch — a misconfigured DNS / ipapi rate-limit would silently allow blocked-state users to deposit.",
+    "BTC payouts master kill-switch (btc_payouts_enabled feature flag) is currently OFF, which is the correct posture for launch (gift cards only). Verify this stays OFF in production until BTC payout reconciliation is wired."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter7_postemergent.py (new — 17-test pytest suite)"
+  ],
+  "success_rate": {
+    "backend": "76% strict (13/17). Excluding the 3 expected/environmental skips: 13/14 = 93%. Only one real bug: checkout/create 500.",
+    "frontend": "not tested (skipped per request)"
+  },
+  "test_credentials": "Admin: admin@wahlah.com / WahLahAdmin2026$ — auto-seeded, role=admin confirmed via /api/auth/me. /app/memory/test_credentials.md is correct and matches the brief.",
+  "seed_data_creation": "Each test run creates 2-3 ephemeral users under @wahlah-qa.com (iter7_*, geo_*). AMOE-claimed by some, gift-card-pending docs in db.gift_card_redemptions. No persistent admin state changed. Login_attempts collection may have new entries from negative-auth paths; harmless.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "After Stripe wrapper is patched in services/stripe_client.py, re-run /app/backend/tests/test_iter7_postemergent.py — only test_checkout_create_does_not_500 should flip to PASS (or to a 200 with real session URL once sk_live_ is rotated in). The 3 skipped tests (geoblock + 2 KYC) need controlled conditions: (a) toggle btc_payouts_enabled=true via PATCH /api/ext/compliance/admin/feature-flags to reach the KYC gate, (b) inject a real blocked-state IP at the ingress layer for geoblock — X-Forwarded-For may be stripped by the Kubernetes ingress in this pod. Cerebras is verified live; if /boss/chat returns 502 queue_exceeded again, simply retry — the integration is correct.",
+  "rca_of_the_issue": "Single root cause for the 1 failing test: /app/backend/services/stripe_client.py wraps stripe.checkout.Session.create() in asyncio.to_thread without any try/except. When STRIPE_API_KEY='sk_test_emergent' (the pod placeholder, not a real Stripe key), Stripe returns AuthenticationError → exception propagates → FastAPI returns 500 'Internal Server Error' with empty body. Fix: add `try: ... except stripe.error.StripeError as e: raise HTTPException(status_code=502, detail=f'Stripe error: {e.user_message or str(e)}')` inside both create_checkout_session and get_checkout_status. This will satisfy the brief's 'fail gracefully with clear message' requirement until the real sk_live_ key is rotated in by the owner. Reproduction: POST /api/checkout/create as any authenticated user with valid game_id + amount=10 + origin_url → backend log shows `stripe._error.AuthenticationError: Invalid API Key provided: sk_test_****gent` at server.py:738."
+}
