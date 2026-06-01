@@ -19,7 +19,8 @@ cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-# edit .env — at minimum set ADMIN_EMAIL, ADMIN_PASSWORD, JWT_SECRET, MONGO_URL
+# edit .env — at minimum set GENIE_ADMIN_EMAIL, GENIE_ADMIN_PASSWORD,
+# GENIE_JWT_SECRET, MONGO_URL
 # and ONE of: CEREBRAS_API_KEY, VENICE_API_KEY, OLLAMA_BASE_URL
 uvicorn server:app --reload --port 8000
 ```
@@ -72,12 +73,14 @@ emits `<<TOOL name=get_weather args={"city":"Miami"} />>` and you handle the res
 ## Deploy
 
 - **Backend**: Render / Fly.io / Railway. Free tiers all work. Add `backend/.env` vars in their dashboard.
+  For Fly.io, copy `.genie-secrets.env.example` to `.genie-secrets.env`, fill it,
+  then run `./deploy-genie-secrets.sh` from the repo root.
 - **Frontend**: Vercel / Netlify / Cloudflare Pages. Set `VITE_BACKEND_URL` to your backend's public URL at build time.
 - **Database**: MongoDB Atlas M0 (free, 512MB).
 
 ## Security notes
 
-- Single-user app: only the `ADMIN_EMAIL` from `.env` can log in. No registration.
+- Single-user app: only the `GENIE_ADMIN_EMAIL` from `.env` can log in. No registration.
 - JWTs expire after 12h. Re-login required after.
 - All chat history is keyed by `user_id` in MongoDB. Wipe with `db.messages.drop()`.
 
