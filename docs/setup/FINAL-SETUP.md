@@ -25,8 +25,8 @@ Click **New repository secret** four times and add these:
 | Name | Value |
 |---|---|
 | `FLY_API_TOKEN` | (your Fly token — same one you gave me) |
-| `MONGO_URL` | `mongodb+srv://wahlah_app:CyYsQnzzJ7T92DBU@cluster0.xskmz96.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0` |
-| `RESEND_API_KEY` | `re_EpJ9Qevj_5PE5PeG1D3xbzXQr7JdivLQm` |
+| `MONGO_URL` | `mongodb+srv://wahlah_app:REPLACE_WITH_PASSWORD@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0` |
+| `RESEND_API_KEY` | `re_REPLACE_WITH_RESEND_API_KEY` |
 | `ALERT_EMAIL` | `Jrs092393@gmail.com` |
 
 ## B. Upload the 3 workflow files via GitHub web UI
