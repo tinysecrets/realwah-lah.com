@@ -230,7 +230,7 @@ Turned the mascot from decoration into an *operator*. The Boss can chat (text or
 - `POST /api/boss/chat`, `GET /api/boss/history/:id`, `GET /api/boss/sessions`, `POST /api/boss/new-session`, `GET /api/boss/tools` — all admin-guarded.
 - Model: **claude-sonnet-4-5-20250929** via `emergentintegrations.LlmChat` + `EMERGENT_LLM_KEY`.
 - Custom **agentic loop** (up to 5 tool hops per turn) using a `<<TOOL name=x args={} />>` protocol the Genie emits inline. Parsed server-side, executed, result fed back.
-- **13 scoped tools** (no raw shell): `get_analytics_snapshot`, `list_recent_users`, `list_pending_redemptions`, `approve_redemption`, `get_feature_flags`, `toggle_feature_flags`, `create_promo_code`, `list_distributor_proxies`, `list_admin_alerts`, `get_backend_logs`, `get_deploy_info`, `generate_deploy_bundle` (render/fly/railway/vercel handoff), `get_compliance_summary`.
+- **13 scoped tools** (no raw shell): `get_analytics_snapshot`, `list_recent_users`, `list_pending_redemptions`, `approve_redemption`, `get_feature_flags`, `toggle_feature_flag`, `create_promo_code`, `list_distributor_proxies`, `list_admin_alerts`, `get_backend_logs`, `get_deploy_info`, `generate_deploy_bundle` (render/fly/railway/vercel handoff), `get_compliance_summary`.
 - Every message + every tool call persisted (`boss_messages`, `boss_actions`) for full audit trail.
 - Personality prompt: warm, sharp, theatrical, calls user "Boss", never sycophantic. Verified live — the Genie called `get_analytics_snapshot` and layered strategic commentary unprompted ("277 users, $0 revenue — worth checking if redemptions are stuck").
 
