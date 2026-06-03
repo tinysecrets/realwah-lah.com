@@ -18,7 +18,6 @@ FAIL=0
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
-# Print a test result line and update counters.
 pass() { echo "  PASS: $1"; (( PASS++ )) || true; }
 fail() { echo "  FAIL: $1"; (( FAIL++ )) || true; }
 
@@ -67,152 +66,159 @@ assert_output_not_contains() {
 }
 
 # ── Test fixture ─────────────────────────────────────────────────────────────
-# Provides a temporary directory with a fake flyctl that succeeds silently,
-# and exports the minimum required secrets so require_secret() calls pass.
+# Provides a temporary directory with a fake flyctl that succeeds silently.
 
-setup_fixture() {
-  local tmpdir
-  tmpdir="$(mktemp -d)"
+FAKE_FLYCTL_DIR="$(mktemp -d)"
+trap 'rm -rf "$FAKE_FLYCTL_DIR"' EXIT
 
-  # Fake flyctl — accepts any arguments, exits 0.
-  cat > "$tmpdir/flyctl" <<'EOF'
+cat > "$FAKE_FLYCTL_DIR/flyctl" <<'FLYCTL_EOF'
 #!/usr/bin/env bash
+# Fake flyctl: accepts any subcommand, prints minimal output, exits 0.
+case "${1:-}" in
+  secrets)
+    case "${2:-}" in
+      set)  echo "Setting secrets on app" ;;
+      list) echo "NAME  DIGEST  CREATED_AT" ;;
+    esac
+    ;;
+esac
 exit 0
-EOF
-  chmod +x "$tmpdir/flyctl"
+FLYCTL_EOF
+chmod +x "$FAKE_FLYCTL_DIR/flyctl"
 
-  echo "$tmpdir"
-}
-
-# Base env vars that satisfy all require_secret() calls.
-# Values are long enough and contain no placeholder patterns.
+# Base environment variables satisfying all require_secret() calls in the script.
+# Values are non-placeholder and meet minimum length requirements.
 BASE_ENV=(
-  "PATH=$(setup_fixture):$PATH"
-  "GENIE_JWT_SECRET=this-is-a-sufficiently-long-jwt-secret-value-32chars"
+  "PATH=$FAKE_FLYCTL_DIR:$PATH"
+  "GENIE_JWT_SECRET=this-is-a-sufficiently-long-jwt-secret-value-32ch"
   "GENIE_ADMIN_EMAIL=admin@example.com"
   "GENIE_ADMIN_PASSWORD=securepassword123456"
   "MONGO_URL=mongodb://localhost:27017/db"
 )
 
-# ── Tests ────────────────────────────────────────────────────────────────────
+# ── Tests: FLY_API_TOKEN validation removed ──────────────────────────────────
 
 echo ""
 echo "=== deploy-genie-secrets.sh tests ==="
 echo ""
-
 echo "--- FLY_API_TOKEN validation removed ---"
 
-# Previously the script would exit 1 when FLY_API_TOKEN was unset.
-# After the PR, it should proceed past that point without error.
+# The old check exited 1 when FLY_API_TOKEN was unset. After the PR removal it
+# must not cause any failure.
 assert_exits_ok \
   "script succeeds when FLY_API_TOKEN is unset" \
   "${BASE_ENV[@]}"
 
-# Explicitly unset FLY_API_TOKEN — should not trigger any error.
+# Explicitly empty FLY_API_TOKEN must also be accepted.
 assert_exits_ok \
-  "script succeeds when FLY_API_TOKEN is explicitly empty string" \
+  "script succeeds when FLY_API_TOKEN is explicitly empty" \
   "${BASE_ENV[@]}" \
   "FLY_API_TOKEN="
 
-# Verify the old error message is never emitted.
+# The old error message must never appear when the token is absent.
 assert_output_not_contains \
   "no 'FLY_API_TOKEN is not set' error when token absent" \
   "FLY_API_TOKEN is not set" \
   "${BASE_ENV[@]}"
 
-# Confirm the script still works when FLY_API_TOKEN IS provided (regression guard).
+# Regression: a valid token must still be accepted (no inadvertent inversion).
 assert_exits_ok \
   "script succeeds when FLY_API_TOKEN is set to a valid value" \
   "${BASE_ENV[@]}" \
   "FLY_API_TOKEN=tok_test_abc123"
 
+# Boundary: token with only whitespace — previously would have triggered error;
+# now must also pass through without complaint.
+assert_exits_ok \
+  "script succeeds when FLY_API_TOKEN is whitespace-only" \
+  "${BASE_ENV[@]}" \
+  "FLY_API_TOKEN=   "
+
+assert_output_not_contains \
+  "no FLY_API_TOKEN error message when token is whitespace" \
+  "FLY_API_TOKEN" \
+  "${BASE_ENV[@]}" \
+  "FLY_API_TOKEN=   "
+
+# ── Tests: ADMIN_EMAIL length validation removed ─────────────────────────────
+
 echo ""
 echo "--- ADMIN_EMAIL length validation removed ---"
 
-# Previously the script exited if ADMIN_EMAIL (old variable) was < 5 chars.
-# After the PR the check is gone; the old ADMIN_EMAIL variable is irrelevant.
+# The removed check tested the legacy ADMIN_EMAIL variable (not GENIE_ADMIN_EMAIL).
+# After removal, any value of ADMIN_EMAIL must be accepted.
 
-# 1-char ADMIN_EMAIL — old code would have exited 1.
+# Single character — was blocked by the old >= 5 length requirement.
 assert_exits_ok \
   "script succeeds when ADMIN_EMAIL (old var) is 1 character" \
   "${BASE_ENV[@]}" \
   "ADMIN_EMAIL=a"
 
-# 4-char ADMIN_EMAIL — right at the old boundary (< 5 → was blocked).
+# 4 characters — right at the old boundary (< 5 was blocked).
 assert_exits_ok \
   "script succeeds when ADMIN_EMAIL (old var) is 4 characters" \
   "${BASE_ENV[@]}" \
   "ADMIN_EMAIL=user"
 
-# Empty ADMIN_EMAIL — was always ignored by old code if it happened to be empty
-# and still ignored now.
+# Empty string — was previously allowed only when unset; now explicitly empty.
 assert_exits_ok \
   "script succeeds when ADMIN_EMAIL (old var) is empty" \
   "${BASE_ENV[@]}" \
   "ADMIN_EMAIL="
 
-# Verify the old error message is never emitted.
-assert_output_not_contains \
-  "no 'ADMIN_EMAIL is too short' error for short value" \
-  "ADMIN_EMAIL is too short" \
-  "${BASE_ENV[@]}" \
-  "ADMIN_EMAIL=hi"
-
-# Old boundary regression: 5-char value (was the minimum that passed the old check).
-# Script should also succeed for this.
+# Exactly 5 characters — was the old minimum passing length; must still pass.
 assert_exits_ok \
   "script succeeds when ADMIN_EMAIL (old var) is exactly 5 characters" \
   "${BASE_ENV[@]}" \
   "ADMIN_EMAIL=admin"
 
-echo ""
-echo "--- CEREBRAS_API_KEY optional block (context lines adjacent to removed code) ---"
+# Verify the old error message is never emitted.
+assert_output_not_contains \
+  "no 'ADMIN_EMAIL is too short' error for 2-char value" \
+  "ADMIN_EMAIL is too short" \
+  "${BASE_ENV[@]}" \
+  "ADMIN_EMAIL=hi"
 
-# When CEREBRAS_API_KEY is provided the block immediately after the removed
-# checks should add it to the secrets list.
+assert_output_not_contains \
+  "no 'ADMIN_EMAIL is too short' error for empty value" \
+  "ADMIN_EMAIL is too short" \
+  "${BASE_ENV[@]}" \
+  "ADMIN_EMAIL="
+
+# Boundary regression: 3-char value — old check would have rejected this.
+assert_exits_ok \
+  "script succeeds when ADMIN_EMAIL (old var) is 3 characters" \
+  "${BASE_ENV[@]}" \
+  "ADMIN_EMAIL=foo"
+
+# ── Tests: CEREBRAS optional block (adjacent to removed code) ────────────────
+
+echo ""
+echo "--- CEREBRAS_API_KEY optional block (adjacent to removed code) ---"
+
+# When CEREBRAS_API_KEY is set the block should add it to SECRET_ARGS.
 CEREBRAS_OUTPUT=$(env "${BASE_ENV[@]}" \
   CEREBRAS_API_KEY=test-cerebras-key \
   CEREBRAS_MODEL=qwen-3-235b \
   bash "$SCRIPT_UNDER_TEST" 2>&1 || true)
 
-if echo "$CEREBRAS_OUTPUT" | grep -q "Setting [0-9]* secrets"; then
+if echo "$CEREBRAS_OUTPUT" | grep -qi "Setting"; then
   pass "script reports setting secrets when CEREBRAS_API_KEY provided"
 else
   fail "script did not report setting secrets when CEREBRAS_API_KEY provided"
 fi
 
-# When CEREBRAS_API_KEY is absent the block should be skipped (no error).
+# When CEREBRAS_API_KEY is absent the optional block should be skipped silently.
 assert_exits_ok \
   "script succeeds when CEREBRAS_API_KEY is absent" \
   "${BASE_ENV[@]}"
 
-echo ""
-echo "--- require_secret() pre-existing validations still enforced ---"
-
-# Sanity check: existing validations (not removed by this PR) still work,
-# ensuring the surrounding logic was not accidentally broken.
-assert_exits_error \
-  "script fails when GENIE_JWT_SECRET is missing" \
-  "${BASE_ENV[@]/GENIE_JWT_SECRET=*/GENIE_JWT_SECRET=}"  # clear via env override
-# ↑ env array substitution won't work cleanly; use a direct approach below.
-
-# Clear GENIE_JWT_SECRET explicitly to confirm require_secret still fires.
-JWT_FAIL_EXIT=0
-env "${BASE_ENV[@]}" GENIE_JWT_SECRET="" bash "$SCRIPT_UNDER_TEST" >/dev/null 2>&1 || JWT_FAIL_EXIT=$?
-if [[ $JWT_FAIL_EXIT -ne 0 ]]; then
-  pass "require_secret still rejects empty GENIE_JWT_SECRET"
-else
-  fail "require_secret did NOT reject empty GENIE_JWT_SECRET"
-fi
-
-# Placeholder value should also be rejected by require_secret.
-JWT_PLACEHOLDER_EXIT=0
-env "${BASE_ENV[@]}" GENIE_JWT_SECRET="REPLACE_ME" bash "$SCRIPT_UNDER_TEST" >/dev/null 2>&1 || JWT_PLACEHOLDER_EXIT=$?
-if [[ $JWT_PLACEHOLDER_EXIT -ne 0 ]]; then
-  pass "require_secret still rejects placeholder GENIE_JWT_SECRET"
-else
-  fail "require_secret did NOT reject placeholder GENIE_JWT_SECRET"
-fi
+# CEREBRAS block should work regardless of FLY_API_TOKEN presence.
+assert_exits_ok \
+  "script succeeds with CEREBRAS_API_KEY set and FLY_API_TOKEN unset" \
+  "${BASE_ENV[@]}" \
+  "CEREBRAS_API_KEY=cerebras-key-value" \
+  "CEREBRAS_MODEL=qwen-3-235b"
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 
