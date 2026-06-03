@@ -2,7 +2,7 @@
 Iteration 7 — post-Emergent-migration backend smoke tests.
 
 Validates the request brief:
-- Admin auth (admin@wahlah.com / WahLahAdmin2026$)
+- Admin auth via ADMIN_EMAIL / ADMIN_PASSWORD env vars
 - Games seeded (7 brand cards)
 - /api/payment/card-info tag == $jrs092393
 - /api/payment/crypto-info 200
@@ -28,8 +28,8 @@ if not BASE_URL:
     # Fallback to the URL from the brief if env not propagated to the test process
     BASE_URL = "https://wahlah-app.preview.emergentagent.com"
 
-ADMIN_EMAIL = "admin@wahlah.com"
-ADMIN_PASSWORD = "WahLahAdmin2026$"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "admin@wahlah.com")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "REPLACE_WITH_ADMIN_PASSWORD")
 
 
 # ------------- Fixtures -------------
