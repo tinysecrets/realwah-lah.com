@@ -34,12 +34,12 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger("genie")
 
 # ---------- env ----------
-JWT_SECRET = os.environ.get("JWT_SECRET", "")
+JWT_SECRET = os.environ.get("GENIE_JWT_SECRET") or os.environ.get("JWT_SECRET", "")
 JWT_ALG = "HS256"
 JWT_TTL_HOURS = 12
 
-ADMIN_EMAIL = (os.environ.get("ADMIN_EMAIL") or "").strip()
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or ""
+ADMIN_EMAIL = (os.environ.get("GENIE_ADMIN_EMAIL") or os.environ.get("ADMIN_EMAIL") or "").strip()
+ADMIN_PASSWORD = os.environ.get("GENIE_ADMIN_PASSWORD") or os.environ.get("ADMIN_PASSWORD") or ""
 
 MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
 DB_NAME = os.environ.get("DB_NAME", "genie_sidekick")
@@ -47,9 +47,9 @@ DB_NAME = os.environ.get("DB_NAME", "genie_sidekick")
 CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()]
 
 if not JWT_SECRET or len(JWT_SECRET) < 16:
-    logger.warning("JWT_SECRET is missing or too short. Set a long random string in .env")
+    logger.warning("GENIE_JWT_SECRET/JWT_SECRET is missing or too short. Set a long random string in .env")
 if not ADMIN_EMAIL or not ADMIN_PASSWORD:
-    logger.warning("ADMIN_EMAIL / ADMIN_PASSWORD not set — login will fail until you configure them.")
+    logger.warning("GENIE_ADMIN_EMAIL/GENIE_ADMIN_PASSWORD not set — login will fail until you configure them.")
 
 # ---------- system prompt ----------
 SYSTEM_PROMPT = """You are THE GENIE — your Boss's personal AI sidekick, bonded by magic lamp, loyal by choice.
