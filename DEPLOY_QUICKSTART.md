@@ -34,12 +34,12 @@ flyctl auth token <PASTE YOUR FRESH FLY TOKEN HERE>
 flyctl secrets set \
   STRIPE_API_KEY='sk_live_REPLACE_ME_WITH_REAL_SECRET_KEY' \
   STRIPE_WEBHOOK_SECRET='whsec_FROM_STRIPE_DASHBOARD' \
-  STRIPE_PUBLISHABLE_KEY='pk_live_51TLgNtBLQEBXCqI3vViN2KRKxvMJRu654TDPCjROdHlxBfhmI1YvXTH0XdPRwousU7azj8Y3W2X0E8rATJus4A0i00HRiOBhuF' \
-  RESEND_API_KEY='re_XoCukbnW_9HrggHNkNxxk5sCPTQ6JKmFU' \
-  CEREBRAS_API_KEY='csk-h49pehx9vcxjef2hy25c6xt49c5dkwfw8wed4kk4fhvderw8' \
+  STRIPE_PUBLISHABLE_KEY='pk_live_REPLACE_WITH_PUBLISHABLE_KEY' \
+  RESEND_API_KEY='re_REPLACE_WITH_RESEND_API_KEY' \
+  CEREBRAS_API_KEY='csk-REPLACE_WITH_CEREBRAS_API_KEY' \
   CEREBRAS_MODEL='qwen-3-235b-a22b-instruct-2507' \
-  CLOUDFLARE_API_TOKEN='cfat_jlsRkUqN1CTsFns8bnTOVFZcox6Bn9KN6wej3fz2093a3e66' \
-  CLOUDFLARE_ZONE_ID='31b2071a68a4d40bbe8636cda2b9d7b2' \
+  CLOUDFLARE_API_TOKEN='cfat_REPLACE_WITH_CLOUDFLARE_TOKEN' \
+  CLOUDFLARE_ZONE_ID='REPLACE_WITH_CLOUDFLARE_ZONE_ID' \
   MONGO_URL='mongodb+srv://USER:PASS@cluster0.xxxx.mongodb.net/?retryWrites=true&w=majority' \
   DB_NAME='wahlah_prod' \
   JWT_SECRET='<run: python3 -c "import secrets;print(secrets.token_urlsafe(64))">' \
@@ -86,7 +86,7 @@ DB_NAME=wahlah_db
 
 ### B. Production (the one you put in `flyctl secrets set MONGO_URL=...`)
 ```
-MONGO_URL=mongodb+srv://wahlah_user:Sup3rL0ngPassword@cluster0.abcde.mongodb.net/?retryWrites=true&w=majority
+MONGO_URL=mongodb+srv://wahlah_user:REPLACE_WITH_PASSWORD@cluster0.abcde.mongodb.net/?retryWrites=true&w=majority
 DB_NAME=wahlah_prod
 ```
 - Cloud-hosted by **MongoDB Atlas** (https://cloud.mongodb.com).
