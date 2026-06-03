@@ -70,7 +70,7 @@ In this preview pod everything runs locally: FastAPI on :8001, React on :3000, M
   - Cerebras Boss Genie chat returns real LLM responses ("Hey Boss — what's the move today?") on `qwen-3-235b-a22b-instruct-2507`.
   - Resend, Cloudflare keys wired and visible to Boss Genie's deploy-info tool.
   - Stripe: pod test key in dev. **NEEDS `sk_live_…` secret key for production** — user sent the publishable `pk_live_…` only (saved separately as `STRIPE_PUBLISHABLE_KEY`).
-- Admin auto-seed verified: `admin@wahlah.com` / `WahLahAdmin2026$` → JWT 200.
+- Admin auto-seed verified with the configured admin email/password → JWT 200.
 - All supervisor services green: backend (8001), frontend (3000), mongodb, nginx-code-proxy.
 
 ## What's been implemented (2026-05-22 — previous session)
@@ -79,7 +79,7 @@ In this preview pod everything runs locally: FastAPI on :8001, React on :3000, M
 - Regenerated full backend `.env` with dev-safe values: `JWT_SECRET`, `STRIPE_API_KEY=sk_test_emergent` (pod test key), Fernet `PROXY_ENCRYPTION_KEY`, `EMERGENT_LLM_KEY` (Universal Key), `BLOCKED_STATES`, KYC/AML thresholds, cookie security flags, `CORS_ORIGINS=*`.
 - Installed missing Python deps: `python-dotenv`, `python-multipart`, `resend`, `playwright`, `pyotp`, `qrcode`, `email-validator`, `dnspython`. Installed Playwright Chromium and symlinked `/root/.cache/ms-playwright → /pw-browsers` so SugarSweepsBridge launches headed cleanly.
 - Installed missing frontend dep `dompurify` (used by BossMode.jsx). Frontend now compiles clean.
-- Admin auto-seed verified: `admin@wahlah.com` / `WahLahAdmin2026$` → `POST /api/auth/login` returns 200 + JWT.
+- Admin auto-seed verified with the configured admin email/password → `POST /api/auth/login` returns 200 + JWT.
 - Verified dashboard renders end-to-end after login: 7 game cards (Fire Kirin, Juwa, Juwa 2, Ultra Panda, Panda Master, Orion Stars, Game Vault), AMOE 100-credit/24h banner, Play/Deposit/Redeem/Ledger/Settings/Concierge tabs, animated Genie mascot, gold-velvet Arabian Nights theme.
 - All four supervisor services green: backend (8001), frontend (3000), mongodb, nginx-code-proxy.
 
