@@ -55,6 +55,16 @@ SECRET_ARGS=(
   "CORS_ORIGINS=$CORS_ORIGINS"
 )
 
+if [ -z "${FLY_API_TOKEN:-}" ]; then
+    echo "Error: FLY_API_TOKEN is not set." >&2
+    exit 1
+fi # <-- Make sure this is present for every if statement
+
+if [ ${#ADMIN_EMAIL} -lt 5 ]; then
+    echo "Error: ADMIN_EMAIL is too short." >&2
+    exit 1
+fi # <-- Add this here as well
+
 if [[ -n "${CEREBRAS_API_KEY:-}" ]]; then
   SECRET_ARGS+=("CEREBRAS_API_KEY=$CEREBRAS_API_KEY")
   SECRET_ARGS+=("CEREBRAS_MODEL=$CEREBRAS_MODEL")
