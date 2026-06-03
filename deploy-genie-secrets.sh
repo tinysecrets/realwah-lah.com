@@ -79,6 +79,8 @@ fi
 if ! command -v flyctl >/dev/null 2>&1; then
   echo "flyctl is required. Install it from https://fly.io/docs/flyctl/install/"
   exit 1
+fi
+
 echo "Setting ${#SECRET_ARGS[@]} secrets on Fly.io app: $APP_NAME"
 flyctl secrets set -a "$APP_NAME" "${SECRET_ARGS[@]}"
 
