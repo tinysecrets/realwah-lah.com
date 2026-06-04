@@ -20,11 +20,11 @@ set -euo pipefail
 
 # --- Fly.io ---
 FLY_APP="wah-lah"                                # name in fly.toml — don't change unless you renamed the Fly app
-FLY_TOKEN=""                                     # OPTIONAL: paste fresh FlyV1 fm2_... here, OR run 'flyctl auth login' beforehand and leave this blank
+FLY_TOKEN=''                                     # OPTIONAL: paste fresh FlyV1 fm2_... here, OR run 'flyctl auth login' beforehand and leave this blank
 
 # --- Stripe (https://dashboard.stripe.com/apikeys) ---
-STRIPE_API_KEY=""                                # sk_live_... or rk_live_... (SECRET — backend uses this to charge cards)
-STRIPE_PUBLISHABLE_KEY=""                        # pk_live_... (frontend uses this to render the Stripe widget)
+STRIPE_API_KEY=""                                # sk_live_... or rk_live_... (REQUIRED - backend uses this to charge cards)
+STRIPE_PUBLISHABLE_KEY=""                        # pk_live_... (REQUIRED - frontend uses this to render the Stripe widget)
 STRIPE_WEBHOOK_SECRET=""                         # whsec_... — OPTIONAL on first deploy; add later (see step 2 at end)
 
 # --- Resend (https://resend.com/api-keys) ---
@@ -33,7 +33,7 @@ EMAIL_FROM="WAH-LAH <onboarding@resend.dev>"     # safe default until wah-lah.co
 CUSTOM_EMAIL_FROM="WAH-LAH <noreply@wah-lah.com>"  # switches over once Resend verifies wah-lah.com
 
 # --- Cerebras (https://cloud.cerebras.ai) — Boss Genie LLM ---
-CEREBRAS_API_KEY=""                              # csk-...
+CEREBRAS_API_KEY=""                              # csk_...
 CEREBRAS_MODEL="qwen-3-235b-a22b-instruct-2507"
 
 # --- Cloudflare (https://dash.cloudflare.com → My Profile → API Tokens) ---
@@ -191,6 +191,8 @@ SECRET_ARGS=(
     "SAR_FREQ_THRESHOLD=3"
     "CASHTAG_KEEP_RATE=0.12"
     "GIFTCARD_FEE_RATE=0.05"
+    "DEPOSIT_BONUS_RATE=0.20"
+    "DEPOSIT_BONUS_PLAYTHROUGH_MULTIPLIER=1.0"
     "BTC_FEE_RATE=0.10"
     "PROXY_DEFAULT_PER_TRANSFER_CAP=500"
     "PROXY_DEFAULT_DAILY_CAP=5000"

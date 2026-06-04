@@ -89,6 +89,7 @@ class TwoFALoginBody(BaseModel):
 class PromoCreateBody(BaseModel):
     code: str = Field(min_length=3, max_length=32)
     bonus_credits: int = Field(ge=1)
+    playthrough_multiplier: float = Field(default=1.0, ge=0.0) # e.g. 1.0 means bonus must be wagered once
     max_uses: int = Field(default=0, ge=0)  # 0 = unlimited
     expires_at: Optional[str] = None  # ISO string
     description: Optional[str] = ""
@@ -355,8 +356,10 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
         user_id = str(db_user["_id"])
         access = _create_access_token(user_id, email)
         refresh = _create_refresh_token(user_id)
-        response.set_cookie("access_token", access, httponly=True, secure=False, samesite="lax", max_age=3600, path="/")
-        response.set_cookie("refresh_token", refresh, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
+        cookie_secure = os.environ.get("COOKIE_SECURE", "false").lower() == "true"
+        cookie_samesite = os.environ.get("COOKIE_SAMESITE", "lax")
+        response.set_cookie("access_token", access, httponly=True, secure=cookie_secure, samesite=cookie_samesite, max_age=3600, path="/")
+        response.set_cookie("refresh_token", refresh, httponly=True, secure=cookie_secure, samesite=cookie_samesite, max_age=604800, path="/")
         return {"id": user_id, "email": email, "name": db_user.get("name"), "role": db_user.get("role", "user")}
 
     # =========================================================
@@ -372,6 +375,7 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
         doc = {
             "code": code,
             "bonus_credits": data.bonus_credits,
+            "playthrough_multiplier": data.playthrough_multiplier,
             "max_uses": data.max_uses,
             "uses_count": 0,
             "expires_at": data.expires_at,
@@ -422,9 +426,12 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
             raise HTTPException(status_code=400, detail="You have already redeemed this code")
         # Apply
         credits = int(promo["bonus_credits"])
+        multiplier = promo.get("playthrough_multiplier", 1.0)
+        playthrough_inc = credits * multiplier
+
         await db.users.update_one(
             {"_id": ObjectId(user["id"])},
-            {"$inc": {"game_credits": credits}},
+            {"$inc": {"game_credits": credits, "playthrough_balance": playthrough_inc}},
         )
         await db.promo_codes.update_one({"_id": promo["_id"]}, {"$inc": {"uses_count": 1}})
         await db.promo_redemptions.insert_one({

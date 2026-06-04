@@ -2,6 +2,20 @@
 
 Dated log of what shipped. Newest entries first.
 
+## 2026-06-04 — 🏁 P0: PRE-FLIGHT COMPLETE
+**Project Readiness**: Site is organized for production launch on the apex domain.
+
+**Upgrades**:
+- **Nerve Center Hardening**: Mission control now monitors 8 gates including Webhook Secret and Playwright environment.
+- **Genie Operator**: Boss Genie upgraded with `ping_all_proxies`, `ofac_refresh`, and `acknowledge_alert` tools.
+- **Amnesia Fix**: Conversation history reconstruction now correctly re-injects tool results across turns.
+- **Money Playbook**: Bonus credits with playthrough logic fully integrated. `playthrough_balance` is enforced on redemptions and decremented on platform transfers.
+- **Security**: Wrapped Stripe calls in `server.py` to handle API key errors gracefully (no more 500s).
+
+**Action Items for Justin**: 
+1. Populate `deploy.sh` with rotated live secrets.
+2. Run `./scripts/install_playwright_production.sh` on host.
+
 ## 2026-04-27 — 🛡️ Vercel WAF bypass: HTTP fast-path for distributor hubs
 
 **Problem**: `hub_bridge.py` (Playwright) hard-blocked by Vercel's bot-challenge edge when scraping `sugarsweeps.com` HTML. Fly.io's datacenter IPs are flagged → no amount of stealth patches helps.

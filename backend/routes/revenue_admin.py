@@ -40,5 +40,7 @@ def register_revenue_admin_routes(api_router: APIRouter, db, get_admin_user):
             cashtag=body.get("cashtag"),
             giftcard=body.get("giftcard"),
             btc=body.get("btc"),
+            deposit_bonus_rate=body.get("deposit_bonus_rate"),
+            deposit_bonus_playthrough_multiplier=body.get("deposit_bonus_playthrough_multiplier"),
             updated_by=admin.get("email", "admin"),
         )
