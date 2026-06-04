@@ -8,18 +8,18 @@ a curated, audited toolbox.
 Tools are deliberately scoped to platform actions (users, promos, flags,
 redemptions, pool health, logs). We never hand the LLM raw shell. Every tool
 call is logged to `boss_actions` for audit.
-
-Model: Llama 3.3 70B via Cerebras Cloud API (OpenAI-compatible endpoint).
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import re
 import uuid
 import logging
+import subprocess
 import httpx
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -78,10 +78,13 @@ After the tool returns, you can either call another tool or give the Boss a fina
 • list_pending_giftcards()                        → gift card redemptions awaiting fulfillment
 • fulfill_giftcard(rid:str, code:str)             → send the gift-card code (auto-emails the user)
 • get_feature_flags()                             → all feature flags + state
-• toggle_feature_flag(flag_key:str, enabled:bool) → flip a flag ON/OFF
-• create_promo_code(code:str, reward:int, max_uses:int=100) → new promo
+• toggle_feature_flag(flag_key:str, enabled:bool) → flip a flag ON/OFF (e.g., 'maintenance_mode_enabled')
+• create_promo_code(code:str, reward:int, max_uses:int=100, playthrough_multiplier:float=1.0) → new promo
 • list_distributor_proxies()                      → pool proxies + health
 • list_admin_alerts(limit:int=10)                 → recent admin alerts (JIT fails, payout fails)
+• acknowledge_alert(alert_id:str)                 → clear an alert from the queue
+• ping_all_proxies()                              → trigger a live health check for the entire distributor pool
+• ofac_refresh()                                  → manually trigger a refresh of the OFAC SDN list
 • get_backend_logs(lines:int=40)                  → tail backend error log
 • get_deploy_info()                               → git SHA, uptime, env flags (what's live right now)
 • generate_deploy_bundle(target:str)              → produce a deploy handoff bundle for another host (render, fly, railway)
@@ -103,7 +106,7 @@ After the tool returns, you can either call another tool or give the Boss a fina
 Now: the lamp is yours. Answer like a friend with a PhD, a magician, and a street-smart operator all in one. The Boss is waiting.
 """
 
-TOOL_PATTERN = re.compile(r"<<\s*TOOL\s+name=([a-zA-Z_]+)\s+args=(\{.*?\})\s*/?>>", re.DOTALL)
+TOOL_PATTERN = re.compile(r"<<\s*TOOL\s+name=([\w_]+)\s+args=(\{.*?\})\s*/?>>", re.DOTALL)
 
 
 class ChatRequest(BaseModel):
@@ -143,12 +146,22 @@ def build_boss_router(db, get_admin_user):
         revenue_cents = rev_doc[0]["revenue"] if rev_doc else 0
         active_games = await db.games.count_documents({"is_active": True})
         tickets_open = await db.support_tickets.count_documents({"status": {"$in": ["open", "pending"]}})
+
+        # Aggregate total playthrough balance across all users for liability tracking
+        pt_pipeline = [
+            {"$group": {"_id": None, "total": {"$sum": "$playthrough_balance"}}}
+        ]
+        pt_cursor = db.users.aggregate(pt_pipeline)
+        pt_doc = await pt_cursor.to_list(length=1)
+        total_playthrough = pt_doc[0]["total"] if pt_doc else 0
+
         return {
             "total_users": total_users,
             "completed_transactions": total_tx,
             "revenue_usd": round(revenue_cents / 100, 2) if revenue_cents else 0,
             "active_games": active_games,
             "tickets_open": tickets_open,
+            "system_playthrough_liability": round(total_playthrough, 2)
         }
 
     async def tool_list_recent_users(args):
@@ -189,6 +202,18 @@ def build_boss_router(db, get_admin_user):
             return {"error": f"No redemption with id {rid}"}
         return {"ok": True, "id": rid, "status": "approved"}
 
+    async def tool_acknowledge_alert(args):
+        aid = args.get("alert_id") or args.get("id")
+        if not aid:
+            return {"error": "alert_id required"}
+        res = await db.admin_alerts.update_one(
+            {"id": aid},
+            {"$set": {"status": "acknowledged", "resolved": True, "resolved_at": datetime.now(timezone.utc).isoformat(), "resolved_by": "boss_genie"}},
+        )
+        if res.matched_count == 0:
+            return {"error": f"No alert with id {aid}"}
+        return {"ok": True, "id": aid}
+
     async def tool_get_feature_flags(_args):
         flags = await db.feature_flags.find({}, {"_id": 0}).to_list(length=200)
         return flags or []
@@ -209,12 +234,14 @@ def build_boss_router(db, get_admin_user):
         code = (args.get("code") or "").strip().upper()
         reward = int(args.get("reward", 0))
         max_uses = int(args.get("max_uses", 100))
+        pt_mult = float(args.get("playthrough_multiplier", 1.0))
         if not code or reward <= 0:
             return {"error": "code and positive reward required"}
         doc = {
             "id": str(uuid.uuid4()),
             "code": code,
             "reward": reward,
+            "playthrough_multiplier": pt_mult,
             "max_uses": max_uses,
             "uses": 0,
             "is_active": True,
@@ -235,6 +262,39 @@ def build_boss_router(db, get_admin_user):
         ).limit(50).to_list(length=50)
         return items
 
+    async def tool_ping_all_proxies(_args):
+        from services.proxy_pool import list_proxies, get_decrypted_credentials, mark_used
+        proxies = await list_proxies(db)
+        results = []
+        for p in proxies:
+            creds = await get_decrypted_credentials(db, p["id"])
+            try:
+                from services.hub_bridge import make_bridge
+                bridge = make_bridge(
+                    hub_type=p.get("hub_type") or "sugar_sweeps",
+                    username=creds["username"],
+                    password=creds["password"],
+                    base_url=creds["base_url"],
+                )
+                try:
+                    ok, msg, _ = await bridge.ping()
+                finally:
+                    await bridge.close()
+                if ok:
+                    from bson import ObjectId
+                    await mark_used(db, ObjectId(p["id"]), 0)
+                results.append({"label": p["label"], "ok": ok, "msg": msg})
+            except Exception as e:
+                results.append({"label": p["label"], "ok": False, "msg": str(e)})
+            await asyncio.sleep(1) # Gentle rate-limit
+
+        passed = sum(1 for r in results if r["ok"])
+        return {
+            "summary": f"{passed}/{len(results)} proxies healthy",
+            "results": results,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
     async def tool_list_admin_alerts(args):
         limit = min(int(args.get("limit", 10)), 50)
         alerts = await db.admin_alerts.find({}, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(length=limit)
@@ -248,12 +308,22 @@ def build_boss_router(db, get_admin_user):
         try:
             with open(path, "r") as f:
                 data = f.readlines()
-            return {"path": path, "tail": "".join(data[-lines:])}
+            
+            tail = "".join(data[-lines:])
+            # Genie Insight: specifically flag Playwright issues if found in the tail
+            alerts = []
+            if "playwright" in tail.lower() or "chromium" in tail.lower() or "import playwright" in tail.lower():
+                alerts.append("CRITICAL: Playwright/Chromium issues detected. Binaries may be missing.")
+            if "stripe" in tail.lower() and ("api_key" in tail.lower() or "invalid" in tail.lower()):
+                alerts.append("WARNING: Stripe connectivity issues found. Check SK/PK keys.")
+            if "ofac" in tail.lower() and "updated" in tail.lower():
+                alerts.append("INFO: OFAC SDN refresh completed successfully.")
+
+            return {"path": path, "tail": tail, "alerts": alerts}
         except Exception as e:
             return {"error": str(e)}
 
     async def tool_get_deploy_info(_args):
-        import subprocess
         try:
             sha = subprocess.check_output(["git", "-C", "/app", "rev-parse", "--short", "HEAD"], text=True).strip()
         except Exception:
@@ -362,9 +432,16 @@ def build_boss_router(db, get_admin_user):
 
     async def tool_launch_readiness(_args):
         """Run the same checks as /api/ext/launch-checklist but inline."""
-        import subprocess  # noqa
         sk = os.environ.get("STRIPE_API_KEY", "")
+
+        # OFAC freshness check
+        ofac_meta = await db.ofac_refreshes.find_one(sort=[("refreshed_at", -1)])
+        ofac_fresh = False
+        if ofac_meta:
+            ofac_fresh = ofac_meta["refreshed_at"] > (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+
         stripe_live = sk.startswith(("sk_live_", "rk_live_"))
+        whsec = os.environ.get("STRIPE_WEBHOOK_SECRET", "").startswith("whsec_")
         games = await db.games.count_documents({"is_active": True})
         active_pool = await db.distributor_proxies.count_documents({"status": "active"})
         try:
@@ -372,15 +449,36 @@ def build_boss_router(db, get_admin_user):
             flags = await get_flags(db)
         except Exception:
             flags = {}
+
+        # Quick playwright check
+        try:
+            pw_ready = subprocess.run(["playwright", "--version"], capture_output=True).returncode == 0
+        except Exception:
+            pw_ready = False
+
         return {
             "stripe_live": stripe_live,
+            "ofac_fresh": ofac_fresh,
+            "stripe_webhook_verified": whsec,
             "active_games": games,
             "active_proxies": active_pool,
             "btc_payouts_enabled": flags.get("btc_payouts_enabled"),
             "giftcard_enabled": flags.get("giftcard_redemption_enabled"),
             "pending_giftcards": await db.gift_card_redemptions.count_documents({"status": "pending"}),
             "pending_btc": await db.redemption_requests.count_documents({"status": {"$in": ["pending", "hold_admin_review"]}}),
+            "playwright_ready": pw_ready
         }
+
+    async def tool_ofac_refresh(_args):
+        try:
+            from services.compliance.ofac import load_sdn_list
+            count, source = await load_sdn_list(force=True)
+            logger.info(f"OFAC SDN list updated: {count} entries from {source}")
+            now = datetime.now(timezone.utc).isoformat()
+            await db.ofac_refreshes.insert_one({"refreshed_at": now, "count": count, "source": source})
+            return {"ok": True, "count": count, "source": source, "refreshed_at": now}
+        except Exception as e:
+            return {"error": f"OFAC Refresh failed: {str(e)}"}
 
     # ---- Cloudflare + Resend DNS automation ----
 
@@ -581,7 +679,10 @@ def build_boss_router(db, get_admin_user):
         "toggle_feature_flag":     tool_toggle_feature_flag,
         "create_promo_code":       tool_create_promo_code,
         "list_distributor_proxies": tool_list_distributor_proxies,
+        "acknowledge_alert":       tool_acknowledge_alert,
+        "ping_all_proxies":        tool_ping_all_proxies,
         "list_admin_alerts":       tool_list_admin_alerts,
+        "ofac_refresh":            tool_ofac_refresh,
         "get_backend_logs":        tool_get_backend_logs,
         "get_deploy_info":         tool_get_deploy_info,
         "generate_deploy_bundle":  tool_generate_deploy_bundle,
@@ -725,6 +826,15 @@ def build_boss_router(db, get_admin_user):
             content = m.get("content") or ""
             if role in ("user", "assistant") and content:
                 messages.append({"role": role, "content": content})
+                
+                # RECALL TRACE: If this was an assistant turn with tool usage,
+                # re-inject the results so the model maintains state across turns.
+                if role == "assistant" and m.get("tool_trace"):
+                    for trace in m["tool_trace"]:
+                        messages.append({
+                            "role": "user",
+                            "content": f"TOOL_RESULT ({m.get('at')}) for {trace['tool']}:\n{_summarize(trace['result'])}"
+                        })
 
         # Agentic loop — up to 8 tool hops per turn. We keep the regex-based
         # tool protocol (TOOL_PATTERN) so every tool in /app/backend/routes/

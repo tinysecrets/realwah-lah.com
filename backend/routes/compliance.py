@@ -12,6 +12,7 @@ Design:
 from __future__ import annotations
 
 import logging
+import json
 import os
 import uuid
 from datetime import datetime, timezone
@@ -197,7 +198,6 @@ def build_compliance_router(db, get_current_user, admin_required) -> APIRouter:
         sig = request.headers.get("persona-signature") or request.headers.get("Persona-Signature") or ""
         if not persona_client.verify_webhook_signature(raw, sig):
             raise HTTPException(status_code=403, detail="invalid signature")
-        import json
         payload = json.loads(raw or b"{}")
         event = payload.get("data", {}).get("attributes", {}).get("name") or payload.get("type")
         inquiry = payload.get("data", {}).get("attributes", {}).get("payload", {}).get("data", {})
@@ -440,6 +440,7 @@ def build_compliance_router(db, get_current_user, admin_required) -> APIRouter:
             "giftcard_redemption_enabled": flags.get("giftcard_redemption_enabled", True),
             "redeem_tab_visible": flags.get("redeem_tab_visible", True),
             "withdraw_tab_visible": flags.get("withdraw_tab_visible", False),
+            "maintenance_mode_enabled": flags.get("maintenance_mode_enabled", False),
         }
 
     return router

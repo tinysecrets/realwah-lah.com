@@ -41,6 +41,18 @@ async def get_current_user(request: Request, db):
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
         
+        # Maintenance Mode check: Block non-admins if active
+        if user.get("role") != "admin":
+            try:
+                from services.feature_flags import get_flag
+                if await get_flag(db, "maintenance_mode_enabled"):
+                    raise HTTPException(
+                        status_code=503, 
+                        detail="WAH-LAH is currently undergoing maintenance. Please check back later."
+                    )
+            except (ImportError, Exception):
+                pass # Fallback to allowing if service is missing or fails
+
         return user
     except HTTPException:
         raise
@@ -56,10 +68,16 @@ def get_user_routes(db):
         """Get user profile"""
         user = await get_current_user(request, db)
         
+        game_credits = user.get("game_credits", user.get("credits", 0.0))
+        playthrough_bal = user.get("playthrough_balance", 0.0)
+        redeemable = max(0.0, game_credits - playthrough_bal)
+
         return {
             "email": user["email"],
             "name": user.get("name", ""),
-            "credits": user.get("credits", 0.0),
+            "credits": game_credits,
+            "redeemable_credits": round(redeemable, 2),
+            "playthrough_balance": round(playthrough_bal, 2),
             "role": user.get("role", "user"),
             "age_verified": user.get("age_verified", False),
             "created_at": user.get("created_at"),
