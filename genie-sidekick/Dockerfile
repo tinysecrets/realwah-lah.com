@@ -7,13 +7,13 @@
 FROM node:20-slim AS frontend
 WORKDIR /fe
 
-COPY frontend/package.json frontend/yarn.lock ./
-RUN yarn install --frozen-lockfile --network-timeout 600000
+COPY frontend/package*.json ./
+RUN npm ci
 
 COPY frontend/ ./
 # Empty backend URL → relative `/api/*` calls (same-origin, no CORS).
 ENV VITE_BACKEND_URL=""
-RUN yarn build
+RUN npm run build
 
 # ============================ Stage 2: backend =============================
 FROM python:3.11-slim AS base
