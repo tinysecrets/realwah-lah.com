@@ -13,6 +13,7 @@ POST   /api/ext/pool/admin/transfer         manually trigger a P2P transfer (adm
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Dict, Optional
 
@@ -64,10 +65,11 @@ class TransferBody(BaseModel):
     recipient_username: str
     amount: float = Field(gt=0)
     platform: str = "fire_kirin"
+    user_id: Optional[str] = None
 
 
 async def execute_pool_transfer(
-    db, recipient_username: str, amount: float, platform: str, proxy_id: Optional[str] = None
+    db, recipient_username: str, amount: float, platform: str, proxy_id: Optional[str] = None, user_id: Optional[str] = None
 ):
     """Select a proxy, attempt a P2P transfer, record success/failure.
 
@@ -127,16 +129,38 @@ async def execute_pool_transfer(
             except Exception:  # pragma: no cover — defensive only
                 pass
 
+    # Sanitize message if error contains internal paths to prevent info leak
+    clean_msg = msg
+    if not ok and ("/app/" in msg or "/root/" in msg or "executable not found" in msg.lower()):
+        clean_msg = "Bridge transfer failed due to internal environment error. Check logs."
+
     if ok:
         await mark_used(db, proxy_oid, amount)
-        return True, msg, {
+        
+        # PLAYTHROUGH LOGIC: If we have a user_id, decrement their playthrough balance
+        # as these credits are now "in play" on the platform.
+        if user_id:
+            try:
+                from bson import ObjectId
+                await db.users.update_one(
+                    {"_id": ObjectId(user_id)},
+                    [{"$set": {
+                        "playthrough_balance": {
+                            "$max": [0, {"$subtract": ["$playthrough_balance", amount]}]
+                        }
+                    }}]
+                )
+            except Exception as e:
+                logger.warning(f"Failed to decrement playthrough balance for user {user_id}: {e}")
+
+        return True, clean_msg, {
             "proxy_id": str(proxy_oid),
             "proxy_label": proxy.get("label"),
             "diagnostic": diagnostic,
         }
 
-    await mark_failed(db, proxy_oid, msg)
-    return False, msg, {
+    await mark_failed(db, proxy_oid, msg) # Keep original message in DB for admin audit
+    return False, clean_msg, {
         "proxy_id": str(proxy_oid),
         "proxy_label": proxy.get("label"),
         "diagnostic": diagnostic,
@@ -232,19 +256,26 @@ def build_distributor_pool_router(db, get_admin_user) -> APIRouter:
                     await bridge.close()
                 except Exception:
                     pass
-            return {"ok": bool(ok), "message": msg, "diagnostic": diag}
+            
+            # Sanitize for admin-facing diagnostic as well to avoid stack-hint leak
+            clean_msg = msg
+            if not ok:
+                if "executable not found" in msg.lower() or "/app/" in msg or "/root/" in msg:
+                    clean_msg = "Bridge driver missing (Playwright). Run install script."
+            
+            return {"ok": bool(ok), "message": clean_msg, "diagnostic": diag}
         except ImportError as e:
-            return {"ok": False, "message": f"Playwright not installed: {e}", "diagnostic": {}}
+            return {"ok": False, "message": "Playwright dependency missing. Run pip install playwright.", "diagnostic": {}}
         except Exception as e:
             logger.exception("ping crashed")
-            return {"ok": False, "message": f"Ping failed: {e}", "diagnostic": {}}
+            return {"ok": False, "message": "Internal error during ping. Check server logs.", "diagnostic": {}}
 
     @router.post("/admin/proxies/{proxy_id}/test-transfer")
     async def test_transfer(proxy_id: str, body: TransferBody, request: Request):
         """Trigger a P2P transfer *pinned* to a specific proxy (admin debug flow)."""
         await get_admin_user(request)
         ok, msg, detail = await execute_pool_transfer(
-            db, body.recipient_username, body.amount, body.platform, proxy_id=proxy_id
+            db, body.recipient_username, body.amount, body.platform, proxy_id=proxy_id, user_id=body.user_id
         )
         return {"ok": ok, "message": msg, **detail}
 
@@ -415,11 +446,10 @@ def build_distributor_pool_router(db, get_admin_user) -> APIRouter:
 
         # Sequential with delays — anti-bot pages (Vercel/Cloudflare) penalize
         # parallel hits from the same egress IP. Sequential is slower but reliable.
-        import asyncio as __a
         results = []
         for p in proxies:
             results.append(await _ping_one(p))
-            await __a.sleep(2)  # cool-down between proxies
+            await asyncio.sleep(2)  # cool-down between proxies
         passed = sum(1 for r in results if r["ok"])
         return {
             "total": len(results),
@@ -433,7 +463,7 @@ def build_distributor_pool_router(db, get_admin_user) -> APIRouter:
         """Admin-initiated manual P2P transfer (routes via round-robin pool)."""
         await get_admin_user(request)
         ok, msg, detail = await execute_pool_transfer(
-            db, body.recipient_username, body.amount, body.platform
+            db, body.recipient_username, body.amount, body.platform, user_id=body.user_id
         )
         return {"ok": ok, "message": msg, **detail}
 

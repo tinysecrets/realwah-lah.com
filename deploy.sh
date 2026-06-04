@@ -20,40 +20,40 @@ set -euo pipefail
 
 # --- Fly.io ---
 FLY_APP="wah-lah"                                # name in fly.toml — don't change unless you renamed the Fly app
-FLY_TOKEN='FlyV1 fm2_lJPECAAAAAAAE6ofxBBNQ6KqfyJNejtArUTKT4kZwrVodHRwczovL2FwaS5mbHkuaW8vdjGWAJLOABilGR8Lk7lodHRwczovL2FwaS5mbHkuaW8vYWFhL3YxxDw5871KSnfO2+iuqKnP6fN3KB9PjuLy1bUE7uGgUBXo0BvMA2gA/BN6CAJXc8G5xCTDC6//k8jtMMUfZbbETteP2X7u0CIpiQQY0kKJ5rgGxcrtizUM/SjZpMYkp6NrRW0puUvYaPyMGgAFIamVot9JnARlI2fDReJPctGl+zU0JgyBRKKbPqFJqQx4Mg2SlAORgc4BC5mIHwWRgqdidWlsZGVyH6J3Zx8BxCB4vGAkkVkSWOqDaGDPPIl0z77RP/rJefqbkOZ+M/+C7Q==,fm2_lJPETteP2X7u0CIpiQQY0kKJ5rgGxcrtizUM/SjZpMYkp6NrRW0puUvYaPyMGgAFIamVot9JnARlI2fDReJPctGl+zU0JgyBRKKbPqFJqQx4MsQQak8Vqqbnm69hroMMkLT118O5aHR0cHM6Ly9hcGkuZmx5LmlvL2FhYS92MZgEks5qGwBfzmv8M/0XzgAXneEKkc4AF53hDMQQMJam9O+9jbsqkhn/P8lmhMQgoY6Z2JoCLxSTo+Y49nT/rjKDbC40+JKJ8ErUm1bwa1k='                                     # OPTIONAL: paste fresh FlyV1 fm2_... here, OR run 'flyctl auth login' beforehand and leave this blank
+FLY_TOKEN=''                                     # OPTIONAL: paste fresh FlyV1 fm2_... here, OR run 'flyctl auth login' beforehand and leave this blank
 
 # --- Stripe (https://dashboard.stripe.com/apikeys) ---
-STRIPE_API_KEY=""                                # sk_live_... or rk_live_... (SECRET — backend uses this to charge cards)
-STRIPE_PUBLISHABLE_KEY="pk_live_51TLgNtBLQEBXCqI3vViN2KRKxvMJRu654TDPCjROdHlxBfhmI1YvXTH0XdPRwousU7azj8Y3W2X0E8rATJus4A0i00HRiOBhuF"                        # pk_live_... (frontend uses this to render the Stripe widget)
+STRIPE_API_KEY=""                                # sk_live_... or rk_live_... (REQUIRED - backend uses this to charge cards)
+STRIPE_PUBLISHABLE_KEY=""                        # pk_live_... (REQUIRED - frontend uses this to render the Stripe widget)
 STRIPE_WEBHOOK_SECRET=""                         # whsec_... — OPTIONAL on first deploy; add later (see step 2 at end)
 
 # --- Resend (https://resend.com/api-keys) ---
-RESEND_API_KEY="re_ELT1wUz9_DprZju7Efmj9qwCLbYF8UNhf"                                # re_...
+RESEND_API_KEY=""                                # re_...
 EMAIL_FROM="WAH-LAH <onboarding@resend.dev>"     # safe default until wah-lah.com is verified in Resend
 CUSTOM_EMAIL_FROM="WAH-LAH <noreply@wah-lah.com>"  # switches over once Resend verifies wah-lah.com
 
 # --- Cerebras (https://cloud.cerebras.ai) — Boss Genie LLM ---
-CEREBRAS_API_KEY="csk-h49pehx9vcxjef2hy25c6xt49c5dkwfw8wed4kk4fhvderw8"                              # csk_...
+CEREBRAS_API_KEY=""                              # csk_...
 CEREBRAS_MODEL="qwen-3-235b-a22b-instruct-2507"
 
 # --- Cloudflare (https://dash.cloudflare.com → My Profile → API Tokens) ---
-CLOUDFLARE_API_TOKEN="cfut_tKZpdWOjOaBw5xjzhtGn6Qm9gLKgZdz0hqPw49Lx690d7f53"                          # cfat_...
-CLOUDFLARE_ZONE_ID="85b7fca6c8481125fc386a03fc1b4028"                            # found at Cloudflare → wah-lah.com → Overview → right sidebar → Zone ID
+CLOUDFLARE_API_TOKEN=""                          # cfat_...
+CLOUDFLARE_ZONE_ID=""                            # found at Cloudflare → wah-lah.com → Overview → right sidebar → Zone ID
 
 # --- MongoDB Atlas (https://cloud.mongodb.com → Cluster → Connect → Drivers → Python) ---
-MONGO_URL="mongodb+srv://wahlahdeployed:al-5uK3RhBEPEF6YlO4W2RBTE5pFDhOVAA01GyGvknLar7i@cluster0.y6owcec.mongodb.net/?appName=Cluster0"                                     # mongodb+srv://user:pwd@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
+MONGO_URL=""                                     # mongodb+srv://user:pwd@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
 DB_NAME="wahlah_prod"
 
 # --- Admin seed account (auto-created on first boot) ---
 ADMIN_EMAIL="admin@wah-lah.com"
-ADMIN_PASSWORD="Dontplay$$$12"                                # 16+ chars random — stash in a password manager
+ADMIN_PASSWORD=""                                # 16+ chars random — stash in a password manager
 
 # --- Payment tag (already set, leave unless you swap Cash App handles) ---
 CARD_PAYMENT_TAG="\$jrs092393"
 
 # --- Optional: Sugar Sweeps hub creds (leave blank to skip Playwright bot init at boot) ---
-SUGAR_SWEEPS_USERNAME="jrs092393@gmail.com"                         # e.g. jrs092393@gmail.com
-SUGAR_SWEEPS_PASSWORD="Onyx4306$"
+SUGAR_SWEEPS_USERNAME=""                         # e.g. jrs092393@gmail.com
+SUGAR_SWEEPS_PASSWORD=""
 
 # ====================================================================
 # 2. DO NOT EDIT BELOW (unless you know what you're doing)
@@ -191,6 +191,8 @@ SECRET_ARGS=(
     "SAR_FREQ_THRESHOLD=3"
     "CASHTAG_KEEP_RATE=0.12"
     "GIFTCARD_FEE_RATE=0.05"
+    "DEPOSIT_BONUS_RATE=0.20"
+    "DEPOSIT_BONUS_PLAYTHROUGH_MULTIPLIER=1.0"
     "BTC_FEE_RATE=0.10"
     "PROXY_DEFAULT_PER_TRANSFER_CAP=500"
     "PROXY_DEFAULT_DAILY_CAP=5000"
