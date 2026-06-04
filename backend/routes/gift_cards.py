@@ -16,7 +16,8 @@ from __future__ import annotations
 import os
 import uuid
 import logging
-from datetime import datetime, timezone
+import subprocess
+from datetime import datetime, timezone, timedelta
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -110,8 +111,14 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
             uid_q = ObjectId(uid) if not isinstance(uid, ObjectId) else uid
         except Exception:
             uid_q = uid
+            
+        # Playthrough check: Cannot redeem credits that are locked by a playthrough requirement
+        playthrough_bal = user.get("playthrough_balance", 0.0)
+        if (user.get("game_credits", 0.0) - playthrough_bal) < amount:
+            raise HTTPException(status_code=400, detail=f"Insufficient redeemable credits. Remaining playthrough: ${playthrough_bal:.2f}")
+
         res = await db.users.update_one(
-            {"_id": uid_q, "game_credits": {"$gte": amount}},
+            {"_id": uid_q, "game_credits": {"$gte": amount + playthrough_bal}},
             {"$inc": {"game_credits": -amount}},
         )
         if res.modified_count == 0:
@@ -313,14 +320,15 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
 
         # 1) Stripe
         sk = os.environ.get("STRIPE_API_KEY", "")
+        pk = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
         stripe_live = sk.startswith(("sk_live_", "rk_live_"))
-        stripe_placeholder = "placeholder" in sk.lower() or not sk
+        stripe_placeholder = "placeholder" in sk.lower() or not sk or not pk
         checks.append({
             "key": "stripe",
             "label": "Stripe API key",
             "status": "fail" if stripe_placeholder else ("pass" if stripe_live else "warn"),
             "detail": "LIVE key configured" if stripe_live else (
-                "placeholder in .env — replace before launch" if stripe_placeholder else
+                "placeholder or missing PK/SK in .env — replace before launch" if stripe_placeholder else
                 "test-mode key detected (OK for staging)"
             ),
         })
@@ -351,7 +359,6 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
 
         # 4) Admin alerts clean (no unresolved critical in last 24h)
         try:
-            from datetime import timedelta
             cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
             unresolved = await db.admin_alerts.count_documents({
                 "resolved": False,
@@ -369,7 +376,6 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
 
         # 5) Compliance — OFAC list refreshed in last 7d
         try:
-            from datetime import timedelta
             colls = await db.list_collection_names()
             ofac_meta = await db.ofac_refreshes.find_one(sort=[("refreshed_at", -1)]) if \
                 "ofac_refreshes" in colls else None
@@ -411,9 +417,37 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
         except Exception as e:
             checks.append({"key": "redemption_path", "label": "Redemption path", "status": "warn", "detail": str(e)})
 
+        # 7) Playwright Environment Check
+        try:
+            pw_check = subprocess.run(["playwright", "--version"], capture_output=True)
+            checks.append({
+                "key": "playwright",
+                "label": "Playwright Environment",
+                "status": "pass" if pw_check.returncode == 0 else "fail",
+                "detail": "CLI ready" if pw_check.returncode == 0 else "CLI missing - run install script",
+            })
+        except Exception:
+            checks.append({
+                "key": "playwright",
+                "label": "Playwright Environment",
+                "status": "fail",
+                "detail": "Package missing"
+            })
+
+        # 8) Stripe Webhook Secret Check
+        whsec = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+        whsec_present = whsec.startswith("whsec_")
+        checks.append({
+            "key": "stripe_webhook",
+            "label": "Stripe Webhook Secret",
+            "status": "pass" if whsec_present else "fail",
+            "detail": "whsec_ configured" if whsec_present else "Missing whsec_ key. Webhook signature verification will fail."
+        })
+
         fails = [c for c in checks if c["status"] == "fail"]
         warns = [c for c in checks if c["status"] == "warn"]
         summary = {
+            # Site is only ready if all critical gates (fails) are clear.
             "ready": len(fails) == 0,
             "total": len(checks),
             "passing": sum(1 for c in checks if c["status"] == "pass"),
