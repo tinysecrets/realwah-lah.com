@@ -2063,8 +2063,8 @@ async def startup_event():
         sugar_sweeps_bridge = None
     
     # Write test credentials
-    os.makedirs("/app/memory", exist_ok=True)
-    with open("/app/memory/test_credentials.md", "w") as f:
+    os.makedirs("memory", exist_ok=True)
+    with open("memory/test_credentials.md", "w") as f:
         f.write("# Test Credentials\n\n")
         f.write("## Admin User\n")
         f.write(f"- Email: {admin_email}\n")
