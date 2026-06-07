@@ -1,4 +1,5 @@
-# Her# Wah-Lah Migration â€” Emergent â†’ Fly.io + Cloudflare Pages + MongoDB Atlas
+# Wah-Lah Migration: Emergent ➔ Fly.io + Cloudflare Pages + MongoDB Atlas
+
 
 > Goal: get `wah-lah.com` running on **stable, free** infrastructure that you control,
 > independent of Emergent's preview/deploy lifecycle. End state: backend on Fly.io,
