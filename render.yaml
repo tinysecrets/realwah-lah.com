@@ -1,16 +1,13 @@
-# Render Blueprint for Sugar City Sweeps
-# Adapted 2026-04-21 for the Distributor Pool architecture.
-#
-# Deploy: sign in to render.com → New → Blueprint → paste this repo URL.
-# Render auto-creates both services below.
+# Render Blueprint for Wah-Lah Migration
+# Optimized for wah-lah.com infrastructure
 
 services:
   # ────────────────── Backend API ──────────────────
   - type: web
-    name: sugar-city-backend
+    name: wah-lah-backend
     env: python
     region: oregon
-    plan: starter          # free tier struggles with Playwright; use starter ($7/mo)
+    plan: starter      # Required for stable Playwright chromium execution
     buildCommand: |
       cd backend && \
       pip install -r requirements.txt && \
@@ -19,76 +16,21 @@ services:
     startCommand: cd backend && uvicorn server:app --host 0.0.0.0 --port $PORT --workers 1
     healthCheckPath: /api/
     envVars:
-      # Runtime
       - key: PYTHON_VERSION
         value: 3.11.0
 
-      # Mongo
+      # Mongo Database Connection
       - key: MONGO_URL
-        sync: false                # supply at first deploy
+        sync: false              # Supply your MongoDB Atlas URI on first deploy
       - key: DB_NAME
-        value: sugar_city_sweeps
+        value: wah_lah_production
 
-      # Auth
+      # Authentication & Security
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGINS
-        sync: false                # e.g. https://sugarcitysweeps.com,https://www.sugarcitysweeps.com
-      - key: ADMIN_EMAIL
-        value: admin@sugarcitysweeps.com
-      - key: ADMIN_PASSWORD
-        sync: false                # strong password, NOT committed
+        sync: false              # e.g., https://wah-lah.com,https://api.wah-lah.com
 
-      # Payments
-      - key: STRIPE_API_KEY
-        sync: false                # sk_test_... or sk_live_...
-      - key: CRYPTO_WALLET_ADDRESS
-        sync: false
-      - key: LIGHTNING_ADDRESS
-        sync: false
-      - key: CARD_PAYMENT_TAG
-        sync: false
-
-      # Email
-      - key: RESEND_API_KEY
-        sync: false
-      - key: EMAIL_FROM
-        value: "Sugar City Sweeps <noreply@sugarcitysweeps.com>"
-
-      # Frontend URL (for email CTAs, password-reset links)
+      # Domain/Routing URLs
       - key: FRONTEND_URL
-        sync: false
-
-      # Distributor Proxy Pool (Hybrid Buffer Strategy)
-      - key: PROXY_ENCRYPTION_KEY
-        generateValue: true        # Render generates a Fernet key on first deploy
-      - key: PROXY_DEFAULT_PER_TRANSFER_CAP
-        value: "500"
-      - key: PROXY_DEFAULT_DAILY_CAP
-        value: "5000"
-      - key: PROXY_COOLDOWN_FAILURES
-        value: "3"
-      - key: PROXY_LOCK_FAILURES
-        value: "5"
-      - key: PROXY_COOLDOWN_MINUTES
-        value: "30"
-
-      # Legacy single-tank env (retained for backward compat; distributor pool replaces this)
-      - key: SUGAR_SWEEPS_URL
-        value: https://sugarsweeps.com
-
-  # ────────────────── Frontend Static Site ──────────────────
-  - type: web
-    name: sugar-city-frontend
-    env: static
-    region: oregon
-    buildCommand: cd frontend && yarn install --frozen-lockfile && yarn build
-    staticPublishPath: frontend/build
-    pullRequestPreviewsEnabled: true
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
-    envVars:
-      - key: REACT_APP_BACKEND_URL
-        sync: false                # https://sugar-city-backend.onrender.com
+        value: https://wah-lah.com
