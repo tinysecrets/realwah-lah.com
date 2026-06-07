@@ -5,16 +5,14 @@
 > independent of Emergent's preview/deploy lifecycle. End state: backend on Fly.io,
 > frontend on Cloudflare Pages, data on MongoDB Atlas, DNS at Cloudflare.
 
-## TL;DR architecture
-
-```
-                  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-                  â”‚   Cloudflare DNS          â”‚
-                  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-                             â”‚
-   wah-lah.com  â”€â”€â”€â–º  Cloudflare Pages  (React static site, free, SSL auto)
-                             â”‚
-   api.wah-lah.com  â”€â”€â”€â–º  Fly.io app  (FastAPI + Playwright, 1GB RAM)
+[ Cloudflare DNS ]
+       │
+       ├───► wah-lah.com ──────► Cloudflare Pages (React Frontend)
+       │
+       └───► api.wah-lah.com ──► Fly.io App (FastAPI + Playwright)
+                                       │
+                                       └──► MongoDB Atlas DB (Cloud Data)
+1GB RAM)
                              â”‚
                              â–¼
                        MongoDB Atlas M0  (free 512MB cloud)
