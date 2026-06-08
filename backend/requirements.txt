@@ -19,3 +19,4 @@ stripe==11.4.1
 resend==2.5.1
 sentry-sdk[fastapi]==2.19.2
 stripe
+PyJWT
