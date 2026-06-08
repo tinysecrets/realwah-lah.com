@@ -1,41 +1,24 @@
-name: Cloudflare Pages
+name: Deploy to Cloudflare Pages
 
 on:
   push:
-    branches: ["main"]
-    paths:
-      - "frontend/**"
-      - ".github/workflows/cloudflare-pages.yml"
-  workflow_dispatch:
-
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    branches:
+      - main  # Change this to master if your default branch is master
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      deployments: write
+    name: Deploy
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: yarn
-          cache-dependency-path: frontend/yarn.lock
-
-      - name: Build frontend
-        working-directory: frontend
-        run: yarn install --frozen-lockfile && yarn build
-        env:
-          REACT_APP_BACKEND_URL: https://api.wah-lah.com
-          CI: false
+      # Add any build steps here if your project requires building before deployment (e.g., npm run build)
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy frontend/build --project-name=wah-lah --branch=main
+          wranglerVersion: '3'
+          command: pages deploy . --project-name=your-project-name
