@@ -14,7 +14,8 @@
     "backend:local": "bash scripts/run_local.sh",
     "deploy:secrets": "bash scripts/deploy-wahlah-secrets.sh",
     "deploy:backend": "bash scripts/deploy_wahlah.sh",
-    "deploy:check": "bash scripts/check-deploy-readiness.sh"
+    "deploy:check": "bash scripts/check-deploy-readiness.sh",
+    "verify:domain": "bash scripts/verify-wahlah-domain.sh"
   },
   "engines": {
     "node": ">=20"

@@ -60,16 +60,28 @@ npm run deploy:secrets
 npm run deploy:backend
 ```
 
-### 3. Frontend → Cloudflare Pages
+### 3. Frontend → Cloudflare Pages (`wah-lah.com`)
 
-Connect this repo in the Cloudflare dashboard:
+Full guide: [`docs/deployment/CLOUDFLARE_PAGES.md`](docs/deployment/CLOUDFLARE_PAGES.md)
+
+Cloudflare dashboard → **Workers & Pages** → Connect Git → `tinysecrets/realwah-lah.com`:
 
 | Setting | Value |
 |---------|-------|
+| Project name | `wah-lah` |
 | Build command | `cd frontend && yarn install --frozen-lockfile && yarn build` |
 | Output directory | `frontend/build` |
 | `REACT_APP_BACKEND_URL` | `https://api.wah-lah.com` |
 | `NODE_VERSION` | `20` |
+| `CI` | `false` |
+
+Custom domains: `wah-lah.com` + `www.wah-lah.com`
+
+Verify after deploy:
+
+```bash
+bash scripts/verify-wahlah-domain.sh
+```
 
 ### 4. DNS (Cloudflare)
 
