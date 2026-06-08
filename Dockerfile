@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 COPY backend/ /app/
 
 # Expose the port the app runs on
-EXPOSE 8080
+EXPOSE 8001
 
 # Command to run the application
 CMD ["python", "main.py"]
