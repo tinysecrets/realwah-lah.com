@@ -1,0 +1,133 @@
+{
+  "theme": "DARK",
+  "archetype": "5 (Jewel & Luxury) with a Velvet-Rope Magic Show aesthetic",
+  "domain": "Gaming/Entertainment SaaS (Sweepstakes)",
+  "colors": {
+    "background": {
+      "base": "#0A0505",
+      "surface": "#140A0A",
+      "elevated": "#1F0F0F"
+    },
+    "brand": {
+      "primary": "#FFA500",
+      "primary_glow": "rgba(255, 165, 0, 0.5)",
+      "gold": "#FFD700",
+      "gold_glow": "rgba(255, 215, 0, 0.6)"
+    },
+    "accent": {
+      "velvet_red": "#800020",
+      "stage_amber": "#FF8C00"
+    },
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#E0C0A0",
+      "muted": "#A08070"
+    }
+  },
+  "typography": {
+    "heading_font": "Playfair Display, serif",
+    "body_font": "Outfit, sans-serif",
+    "h1": "text-5xl md:text-6xl lg:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-orange-200 drop-shadow-sm",
+    "h2": "text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-white",
+    "h3": "text-xl md:text-2xl font-semibold tracking-tight text-white",
+    "body": "text-base md:text-lg text-orange-50/70 leading-relaxed"
+  },
+  "surfaces_and_materials": {
+    "glass_panel": "backdrop-blur-xl bg-black/40 border border-orange-500/20 shadow-[0_8px_32px_rgba(255,165,0,0.1)]",
+    "velvet_card": "bg-gradient-to-b from-[#1A0D0D] to-[#0A0505] border border-red-900/30 shadow-[inset_0_1px_0_rgba(255,165,0,0.1)]",
+    "gold_button": "bg-gradient-to-r from-orange-500 to-amber-500 text-black font-bold border border-yellow-300 shadow-[0_0_20px_rgba(255,165,0,0.4)] hover:shadow-[0_0_30px_rgba(255,165,0,0.6)] transition-all",
+    "stage_spotlight": "absolute pointer-events-none rounded-full blur-[100px] bg-orange-500/20"
+  },
+  "hero_composition": {
+    "description": "A cohesive scene featuring the Genie emerging from the lamp with smoke, replacing the old disconnected sticker approach.",
+    "background": "Dark radial gradient from top-center (#301010 to #0A0A0A) simulating stage lighting.",
+    "elements": [
+      {
+        "name": "Spotlight",
+        "css": "absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-500/20 via-orange-500/5 to-transparent blur-3xl -z-10"
+      },
+      {
+        "name": "Lamp",
+        "asset": "/mascots/genie_lamp_static.png",
+        "position": "absolute bottom-10 right-10 md:right-32 w-32 md:w-48 z-20 drop-shadow-[0_0_30px_rgba(255,215,0,0.6)]"
+      },
+      {
+        "name": "Genie",
+        "asset": "/mascots/genie_hero.png",
+        "position": "absolute bottom-32 right-0 md:right-20 w-80 md:w-[28rem] z-10 [mask-image:linear-gradient(to_bottom,black_60%,transparent_100%)]",
+        "animation": "framer-motion floating effect (y: [0, -10, 0])"
+      },
+      {
+        "name": "Smoke",
+        "css": "absolute bottom-10 right-10 md:right-20 w-96 h-96 bg-orange-500/30 blur-[80px] mix-blend-screen rounded-full z-15",
+        "animation": "pulse and scale slowly"
+      }
+    ]
+  },
+  "game_cards_system": {
+    "layout": "Grid of cards (grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4) with generous gap-6",
+    "card_style": "velvet_card from surfaces_and_materials, rounded-2xl overflow-hidden group relative transition-transform hover:-translate-y-2 hover:border-orange-500/50",
+    "hover_effect": "A dynamic radial spotlight following the mouse, or a static glowing blur at the bottom of the card that intensifies on hover.",
+    "games": [
+      {
+        "name": "Fire Kirin",
+        "theme_color": "#FF4500",
+        "icon_strategy": "Combine Lucide 'Flame' and 'Waves' icons, or custom SVG of a fiery dragon/koi.",
+        "asset": "custom_svg"
+      },
+      {
+        "name": "Juwa",
+        "theme_color": "#FF0055",
+        "icon_strategy": "Combine Lucide 'Cherry' (if available, or 'Circle' grouped) and 'Dices' to represent slot/cherries.",
+        "asset": "custom_svg"
+      },
+      {
+        "name": "Orion Stars",
+        "theme_color": "#00BFFF",
+        "icon_strategy": "Use provided SVG logo.",
+        "asset": "/game-logos/orion-stars.svg"
+      },
+      {
+        "name": "Ultra Panda",
+        "theme_color": "#00FF7F",
+        "icon_strategy": "Combine Lucide 'Leaf' (bamboo) and 'Circle' shapes to form a panda face silhouette.",
+        "asset": "custom_svg"
+      },
+      {
+        "name": "Panda Master",
+        "theme_color": "#32CD32",
+        "icon_strategy": "Use provided SVG logo.",
+        "asset": "/game-logos/panda-master.svg"
+      },
+      {
+        "name": "Game Vault",
+        "theme_color": "#FFD700",
+        "icon_strategy": "Use provided SVG logo.",
+        "asset": "/game-logos/game-vault.svg"
+      },
+      {
+        "name": "vBlink",
+        "theme_color": "#8A2BE2",
+        "icon_strategy": "Combine Lucide 'Gem' and 'Sparkles'.",
+        "asset": "custom_svg"
+      }
+    ]
+  },
+  "animations": {
+    "buttons": "Ripple effect on click, scale up 1.05 on hover",
+    "page_load": "Staggered fade-in up for text, cards, and sections using Framer Motion",
+    "ambient": "Slow floating animations for mascots, slow pulsing for background glows"
+  },
+  "testing": {
+    "requirements": "All interactive elements (buttons, links, game cards, login forms) MUST have data-testid attributes (e.g., data-testid='hero-cta-button', data-testid='game-card-juwa')."
+  },
+  "instructions_to_main_agent": [
+    "Load Google Fonts: Playfair Display and Outfit in index.html or global css.",
+    "Remove the old generic sticker images (gingerbread VR and square crop coins).",
+    "Build the hero section exactly as described in hero_composition to ensure the Genie looks like it's naturally emerging from the lamp.",
+    "Use raw HTML/Tailwind for the marketing/landing page for full creative control over the layouts, asymmetrical grid bento boxes for features.",
+    "Ensure all 7 game cards are built. For games without SVG assets, construct a visually distinct SVG directly in the React component using paths or grouped Lucide icons colored with their respective theme_color.",
+    "Apply the velvet_card and glass_panel utility classes/styles to give the app a luxury, magical Vegas atmosphere.",
+    "Check App.js to ensure no routing or functional state is broken while applying the visual overhaul."
+  ]
+}

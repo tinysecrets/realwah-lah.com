@@ -1,0 +1,36 @@
+# Render Blueprint for Wah-Lah Migration
+# Optimized for wah-lah.com infrastructure
+
+services:
+  # ────────────────── Backend API ──────────────────
+  - type: web
+    name: wah-lah-backend
+    env: python
+    region: oregon
+    plan: starter      # Required for stable Playwright chromium execution
+    buildCommand: |
+      cd backend && \
+      pip install -r requirements.txt && \
+      playwright install chromium && \
+      playwright install-deps chromium
+    startCommand: cd backend && uvicorn server:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /api/
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+
+      # Mongo Database Connection
+      - key: MONGO_URL
+        sync: false              # Supply your MongoDB Atlas URI on first deploy
+      - key: DB_NAME
+        value: wah_lah_production
+
+      # Authentication & Security
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false              # e.g., https://wah-lah.com,https://api.wah-lah.com
+
+      # Domain/Routing URLs
+      - key: FRONTEND_URL
+        value: https://wah-lah.com
