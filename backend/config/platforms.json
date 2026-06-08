@@ -1,0 +1,162 @@
+{
+  "platforms": [
+    {
+      "id": "fire_kirin",
+      "name": "Fire Kirin",
+      "enabled": false,
+      "agent_url": "https://agent.firekirin.xyz",
+      "login_endpoint": "/api/auth/login",
+      "recharge_endpoint": "/api/agent/recharge",
+      "balance_endpoint": "/api/agent/balance",
+      "deduct_endpoint": "/api/agent/deduct",
+      "use_headless": false,
+      "credentials": {
+        "username_env": "FIREKIRIN_AGENT_USER",
+        "password_env": "FIREKIRIN_AGENT_PASS"
+      },
+      "rate_limit": {
+        "requests_per_minute": 30,
+        "retry_attempts": 3,
+        "retry_delay_seconds": 5
+      }
+    },
+    {
+      "id": "juwa",
+      "name": "Juwa",
+      "enabled": false,
+      "agent_url": "https://agent.juwa777.com",
+      "login_endpoint": "/api/auth/login",
+      "recharge_endpoint": "/api/agent/recharge",
+      "balance_endpoint": "/api/agent/balance",
+      "deduct_endpoint": "/api/agent/deduct",
+      "use_headless": false,
+      "credentials": {
+        "username_env": "JUWA_AGENT_USER",
+        "password_env": "JUWA_AGENT_PASS"
+      },
+      "rate_limit": {
+        "requests_per_minute": 30,
+        "retry_attempts": 3,
+        "retry_delay_seconds": 5
+      }
+    },
+    {
+      "id": "juwa2",
+      "name": "Juwa 2",
+      "enabled": false,
+      "agent_url": "https://agent.juwa2.com",
+      "login_endpoint": "/api/auth/login",
+      "recharge_endpoint": "/api/agent/recharge",
+      "balance_endpoint": "/api/agent/balance",
+      "deduct_endpoint": "/api/agent/deduct",
+      "use_headless": false,
+      "credentials": {
+        "username_env": "JUWA2_AGENT_USER",
+        "password_env": "JUWA2_AGENT_PASS"
+      },
+      "rate_limit": {
+        "requests_per_minute": 30,
+        "retry_attempts": 3,
+        "retry_delay_seconds": 5
+      }
+    },
+    {
+      "id": "ultra_panda",
+      "name": "Ultra Panda",
+      "enabled": false,
+      "agent_url": "https://agent.ultrapanda.mobi",
+      "login_endpoint": "/api/auth/login",
+      "recharge_endpoint": "/api/agent/recharge",
+      "balance_endpoint": "/api/agent/balance",
+      "deduct_endpoint": "/api/agent/deduct",
+      "use_headless": false,
+      "credentials": {
+        "username_env": "ULTRAPANDA_AGENT_USER",
+        "password_env": "ULTRAPANDA_AGENT_PASS"
+      },
+      "rate_limit": {
+        "requests_per_minute": 30,
+        "retry_attempts": 3,
+        "retry_delay_seconds": 5
+      }
+    },
+    {
+      "id": "panda_master",
+      "name": "Panda Master",
+      "enabled": false,
+      "agent_url": "https://agent.pandamaster.vip",
+      "login_endpoint": "/agent/login",
+      "recharge_endpoint": "/agent/addcredits",
+      "balance_endpoint": "/agent/playerinfo",
+      "deduct_endpoint": "/agent/removecredits",
+      "use_headless": false,
+      "credentials": {
+        "username_env": "PANDAMASTER_AGENT_USER",
+        "password_env": "PANDAMASTER_AGENT_PASS"
+      },
+      "rate_limit": {
+        "requests_per_minute": 30,
+        "retry_attempts": 3,
+        "retry_delay_seconds": 5
+      }
+    },
+    {
+      "id": "orion_stars",
+      "name": "Orion Stars",
+      "enabled": false,
+      "agent_url": "https://agent.orionstars.vip",
+      "login_endpoint": "/api/login",
+      "recharge_endpoint": "/api/credit/add",
+      "balance_endpoint": "/api/player/info",
+      "deduct_endpoint": "/api/credit/deduct",
+      "use_headless": false,
+      "credentials": {
+        "username_env": "ORIONSTARS_AGENT_USER",
+        "password_env": "ORIONSTARS_AGENT_PASS"
+      },
+      "rate_limit": {
+        "requests_per_minute": 30,
+        "retry_attempts": 3,
+        "retry_delay_seconds": 5
+      }
+    },
+    {
+      "id": "game_vault",
+      "name": "Game Vault",
+      "enabled": false,
+      "agent_url": "https://agent.gamevault.com",
+      "login_endpoint": "/api/v1/auth",
+      "recharge_endpoint": "/api/v1/credits/add",
+      "balance_endpoint": "/api/v1/player",
+      "deduct_endpoint": "/api/v1/credits/remove",
+      "use_headless": false,
+      "credentials": {
+        "username_env": "GAMEVAULT_AGENT_USER",
+        "password_env": "GAMEVAULT_AGENT_PASS"
+      },
+      "rate_limit": {
+        "requests_per_minute": 30,
+        "retry_attempts": 3,
+        "retry_delay_seconds": 5
+      }
+    }
+  ],
+  "bitcoin": {
+    "gateway_type": "btcpay",
+    "webhook_secret_env": "BTC_WEBHOOK_SECRET",
+    "min_confirmations": 1,
+    "payout_approval_threshold_usd": 500,
+    "manual_approval_required": true
+  },
+  "security": {
+    "session_timeout_minutes": 60,
+    "heartbeat_interval_seconds": 300,
+    "max_retry_attempts": 3,
+    "enable_2fa": false
+  },
+  "logging": {
+    "level": "INFO",
+    "enable_transaction_log": true,
+    "log_file": "/var/log/game_middleware.log"
+  }
+}

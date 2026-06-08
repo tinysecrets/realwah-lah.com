@@ -1,0 +1,69 @@
+# IDE
+.idea/
+.vscode/
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# Testing
+coverage/
+
+# Production builds
+frontend/build/
+build/
+dist/
+out/
+
+# Environment and secrets (never commit)
+.env
+.env.*
+!.env-examples/**
+!.env.*.example
+*.env
+.wahlah-secrets.env
+.genie-secrets.env
+credentials.json
+*token.json*
+*.pem
+*.key
+.credentials
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.log
+dump.rdb
+
+# System
+.DS_Store
+Thumbs.db
+
+# Caches
+.cache/
+frontend/node_modules/.cache/
+
+# Deployment artifacts
+.vercel
+
+# Local-only / legacy
+.emergent/
+.gitconfig
+hello-fly/
+memory/test_credentials.md
+.wahlah-secrets.env
+.genie-secrets.env

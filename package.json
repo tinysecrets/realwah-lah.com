@@ -1,0 +1,24 @@
+{
+  "name": "wah-lah",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WAH-LAH monorepo — FastAPI backend (Fly.io) + React frontend (Cloudflare Pages) + MongoDB Atlas",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "frontend:install": "yarn --cwd frontend install --frozen-lockfile",
+    "frontend:build": "yarn --cwd frontend build",
+    "frontend:start": "yarn --cwd frontend start",
+    "backend:run": "cd backend && uvicorn server:app --reload --host 0.0.0.0 --port 8001",
+    "backend:local": "bash scripts/run_local.sh",
+    "deploy:secrets": "bash scripts/deploy-wahlah-secrets.sh",
+    "deploy:backend": "bash scripts/deploy_wahlah.sh",
+    "deploy:check": "bash scripts/check-deploy-readiness.sh",
+    "verify:domain": "bash scripts/verify-wahlah-domain.sh"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "yarn@1.22.22"
+}
