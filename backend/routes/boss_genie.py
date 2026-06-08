@@ -367,7 +367,7 @@ def build_boss_router(db, get_admin_user):
                 "6. Verify /api/health and /api/ext/pool/admin/health return 200",
                 "7. Switch DNS to new host",
             ],
-            "blueprint_file": "/app/render.yaml" if target == "render" else None,
+            "blueprint_file": "/app/infra/render.yaml" if target == "render" else None,
             "note": "Genie generated the playbook. Actual redeploy still needs the Boss to press go — we never auto-ship real money infra.",
         }
         # Persist bundle

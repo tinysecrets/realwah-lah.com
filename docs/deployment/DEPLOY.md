@@ -84,8 +84,8 @@ flyctl secrets set \
   MONGO_URL='mongodb+srv://wahlah_app:YOUR_PASS@wah-lah-prod.xxxxx.mongodb.net/?retryWrites=true&w=majority' \
   DB_NAME='sugar_city_sweeps' \
   JWT_SECRET='<generate a long random string>' \
-  ADMIN_EMAIL='Jrs092393@gmail.com' \
-  ADMIN_PASSWORD='SugarCity2026$' \
+  ADMIN_EMAIL='jrs092393@gmail.com' \
+  ADMIN_PASSWORD='<your-16+-char-admin-password>' \
   STRIPE_API_KEY='rk_live_...' \
   RESEND_API_KEY='re_...' \
   EMAIL_FROM='WAH-LAH <onboarding@resend.dev>' \
@@ -177,7 +177,7 @@ curl https://api.wah-lah.com/api/health
 
 curl -X POST https://api.wah-lah.com/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"Jrs092393@gmail.com","password":"SugarCity2026$"}'
+  -d '{"email":"jrs092393@gmail.com","password":"<your-admin-password>"}'
 # → 200 + JWT cookies (this was the broken endpoint!)
 ```
 

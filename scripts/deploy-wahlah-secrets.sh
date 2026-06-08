@@ -5,8 +5,16 @@ set -euo pipefail
 # Copy .wahlah-secrets.env.example to .wahlah-secrets.env, fill real values,
 # then run this script from the repository root.
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
 APP_NAME="${APP_NAME:-wah-lah}"
 ENV_FILE="${ENV_FILE:-.wahlah-secrets.env}"
+
+if [[ ! -f "$ENV_FILE" && -f ".env-examples/.wahlah-secrets.env.example" ]]; then
+  echo "No $ENV_FILE found. Run: bash scripts/setup-secrets.sh"
+  exit 1
+fi
 
 if [[ -f "$ENV_FILE" ]]; then
   set -a
@@ -38,8 +46,15 @@ require_secret() {
 
 require_secret MONGO_URL 12
 require_secret DB_NAME 1
-require_secret JWT_SECRET 32
-require_secret PROXY_ENCRYPTION_KEY 32
+
+if is_placeholder "${JWT_SECRET:-}"; then
+  JWT_SECRET="$(python3 -c 'import secrets; print(secrets.token_urlsafe(64))')"
+  echo "Generated JWT_SECRET"
+fi
+if is_placeholder "${PROXY_ENCRYPTION_KEY:-}"; then
+  PROXY_ENCRYPTION_KEY="$(python3 -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())' 2>/dev/null || python3 -c 'import base64, os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())')"
+  echo "Generated PROXY_ENCRYPTION_KEY"
+fi
 require_secret ADMIN_EMAIL 3
 require_secret ADMIN_PASSWORD 16
 require_secret STRIPE_API_KEY 8
