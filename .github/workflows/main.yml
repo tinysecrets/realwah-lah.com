@@ -1,69 +1,39 @@
-name: Signature CI/CD Pipeline
+name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
-  changes:
-    runs-on: ubuntu-latest
-    outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-      infra: ${{ steps.filter.outputs.infra }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            backend:
-              - 'backend/**'
-            frontend:
-              - 'frontend/**'
-            infra:
-              - 'infra/**'
-              - '.github/workflows/**'
-
-  build-backend:
-    needs: changes
-    if: ${{ needs.changes.outputs.backend == 'true' || needs.changes.outputs.infra == 'true' }}
+  backend-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-      - run: echo "Replace with backend test commands"
+          python-version: "3.11"
+      - run: pip install -r backend/requirements.txt pytest requests
+      - run: python -m pytest backend/tests/test_hub_http_bridge.py -q
 
-  build-frontend:
-    needs: changes
-    if: ${{ needs.changes.outputs.frontend == 'true' || needs.changes.outputs.infra == 'true' }}
+  frontend-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-      - run: echo "Replace with frontend build commands"
-
-  deploy-flyio:
-    needs: [changes, build-backend, build-frontend]
-    if: |
-      always() &&
-      (needs.build-backend.result == 'success' || needs.build-backend.result == 'skipped') &&
-      (needs.build-frontend.result == 'success' || needs.build-frontend.result == 'skipped')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: cd infra && flyctl deploy --remote-only -c fly.toml
+          node-version: "20"
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+      - run: yarn --cwd frontend install --frozen-lockfile
+      - run: yarn --cwd frontend build
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          REACT_APP_BACKEND_URL: https://api.wah-lah.com
+          CI: false

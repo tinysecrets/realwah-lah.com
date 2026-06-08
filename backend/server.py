@@ -1,20 +1,3 @@
-from pymongo import MongoClient
-import os
-
-# Connect to your MongoDB
-client = MongoClient(os.getenv('MONGO_URL'))
-db = client[os.getenv('DB_NAME')]
-users = db.users
-
-# Perform the update
-result = users.update_many(
-    {"state": {"$exists": False}}, 
-    {"$set": {"state": "UNKNOWN"}}
-)
-
-print(f"Migration complete: {result.modified_count} users updated.")
-
-
 from dotenv import load_dotenv
 from pathlib import Path
 import os
@@ -2079,20 +2062,6 @@ async def startup_event():
         )
         sugar_sweeps_bridge = None
     
-    # Write test credentials
-    os.makedirs("memory", exist_ok=True)
-    with open("memory/test_credentials.md", "w") as f:
-        f.write("# Test Credentials\n\n")
-        f.write("## Admin User\n")
-        f.write(f"- Email: {admin_email}\n")
-        f.write(f"- Password: {admin_password}\n")
-        f.write("- Role: admin\n\n")
-        f.write("## Auth Endpoints\n")
-        f.write("- POST /api/auth/register\n")
-        f.write("- POST /api/auth/login\n")
-        f.write("- POST /api/auth/logout\n")
-        f.write("- GET /api/auth/me\n")
-
 @app.on_event("shutdown")
 async def shutdown_db_client():
     if middleware_manager and middleware_manager.initialized:

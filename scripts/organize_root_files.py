@@ -13,6 +13,8 @@ import shutil
 ROOT = Path(__file__).resolve().parents[1]
 
 MOVE_RULES = {
+    "render.yaml": Path("infra/render.yaml"),
+    "run_new.sh": Path("scripts/run_local.sh"),
     "DEPLOY.md": Path("docs/deployment/DEPLOY.md"),
     "DEPLOYMENT_STATUS.md": Path("docs/deployment/DEPLOYMENT_STATUS.md"),
     "FINAL-SETUP.md": Path("docs/setup/FINAL-SETUP.md"),

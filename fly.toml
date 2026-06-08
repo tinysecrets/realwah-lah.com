@@ -1,13 +1,10 @@
-# Deploy from repo root: flyctl deploy --config fly.toml
-# This file mirrors root fly.toml for workflows that cd into infra/.
 app = "wah-lah"
 primary_region = "iad"
 kill_signal = "SIGTERM"
 kill_timeout = "30s"
 
 [build]
-  dockerfile = "../Dockerfile"
-  build-context = ".."
+  dockerfile = "Dockerfile"
 
 [env]
   PORT = "8001"
