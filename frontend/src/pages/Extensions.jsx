@@ -768,7 +768,7 @@ const AdminTickets = () => {
   const load = async () => {
     try { const { data } = await axios.get(`${API}/ext/admin/support/tickets${filter ? `?status=${filter}` : ""}`); setTickets(data); } catch (err) { console.error("Extensions error:", err); }
   };
-  useEffect(() => { load(); }, [filter]);
+  useEffect()) => { load(); }, [load,filter]);
 
   const sendReply = async (id) => {
     try {
