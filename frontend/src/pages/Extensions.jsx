@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useCallback } from 'react';
 import axios from "axios";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -765,11 +765,10 @@ const AdminTickets = () => {
   const [replyId, setReplyId] = useState(null);
   const [reply, setReply] = useState("");
 
-  const load = async () => {
+  const load = useCallback(async () => {
     try { const { data } = await axios.get(`${API}/ext/admin/support/tickets${filter ? `?status=${filter}` : ""}`); setTickets(data); } catch (err) { console.error("Extensions error:", err); }
-  };
-  useEffect()); => { load(); }, [load,filter]);
-
+  }, [filter]);
+  useEffect(() => { load(); }, [load, filter])
   const sendReply = async (id) => {
     try {
       await axios.post(`${API}/ext/admin/support/tickets/${id}/respond`, { message: reply });
