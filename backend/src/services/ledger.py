@@ -3,8 +3,18 @@ from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
 from fastapi import HTTPException
 
-client = AsyncIOMotorClient(os.getenv("MONGO_URI"))
-db = client.wah_lah
+MONGODB_URI = (
+    os.getenv("MONGODB_URI")
+    or os.getenv("MONGO_URL")
+    or os.getenv("MONGO_URI")
+)
+if not MONGODB_URI:
+    raise RuntimeError(
+        "MONGODB_URI is required. Set it in .env for local testing or via production secrets."
+    )
+DB_NAME = os.getenv("DB_NAME", "wahlah_prod")
+client = AsyncIOMotorClient(MONGODB_URI)
+db = client[DB_NAME]
 
 async def claim_daily_amoe(user_id: str):
     now = datetime.now(timezone.utc)

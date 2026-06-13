@@ -17,4 +17,4 @@ COPY backend/ /app/
 EXPOSE 8001
 
 # Command to run the application
-CMD ["python", "main.py"]
+CMD ["python", "server.py"]
