@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 import os
 
-ROOT_DIR = Path(__file__).parent
+ROOT_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT_DIR / '.env')
 
 try:
@@ -57,9 +57,18 @@ from config.currency_config import (
 )
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+mongodb_uri = (
+    os.environ.get("MONGODB_URI")
+    or os.environ.get("MONGO_URL")
+    or os.environ.get("MONGO_URI")
+)
+if not mongodb_uri:
+    raise RuntimeError(
+        "MONGODB_URI is required. Set it in the root .env for local testing "
+        "or via production environment variables / Fly secrets."
+    )
+client = AsyncIOMotorClient(mongodb_uri)
+db = client[os.environ.get("DB_NAME", "wahlah_prod")]
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
