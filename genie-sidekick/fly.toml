@@ -1,37 +1,17 @@
-app = "realwah-lah-com"
+app = "genie-sidekick"
+primary_region = "iad"
 kill_signal = "SIGTERM"
 kill_timeout = "30s"
-primary_region = "iad"
 
 [build]
-dockerfile = "Dockerfile"
+  dockerfile = "Dockerfile"
 
 [env]
-PORT = "8001"
-PYTHONUNBUFFERED = "1"
-
-[http_service]
-auto_start_machines = true
-auto_stop_machines = false
-force_https = true
-internal_port = 8001
-min_machines_running = 1
-processes = [ "app" ]
-
-  [[http_service.checks]]
-  grace_period = "30s"
-  interval = "20s"
-  method = "GET"
-  path = "/api/health"
-  timeout = "5s"
-
-  [http_service.concurrency]
-  hard_limit = 250
-  soft_limit = 200
-  type = "requests"
+  PORT = "8001"
+  PYTHONUNBUFFERED = "1"
 
 [[vm]]
-cpu_kind = "shared"
-cpus = 1
-memory = "1024mb"
-size = "shared-cpu-1x"
+  size = "shared-cpu-1x"
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "1024mb"
