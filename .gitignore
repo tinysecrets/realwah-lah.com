@@ -1,69 +1,94 @@
-# IDE
-.idea/
-.vscode/
+# ============================================================================
+# WAH-LAH — .gitignore (deduped, single source of truth)
+# ============================================================================
 
-# Dependencies
-node_modules/
-frontend/node_modules/
-.pnp
-.pnp.js
-.yarn/install-state.gz
+# VCS / IDE
+.git
+.gitignore
+.github
+.vscode
+.idea
+.DS_Store
+*.swp
+*.swo
+*~
 
-# Testing
-coverage/
-
-# Production builds
-frontend/build/
-build/
-dist/
-out/
-
-# Environment and secrets (never commit)
-.env
-.env.*
-!.env-examples/**
-!.env.*.example
-*.env
-.wahlah-secrets.env
-.genie-secrets.env
-credentials.json
-*token.json*
-*.pem
-*.key
-.credentials
-
-# Python
+# Python caches
 __pycache__/
 *.pyc
-venv/
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 .venv/
+venv/
+ENV/
+env/
 .pytest_cache/
 .mypy_cache/
+.dmypy.json
+dmypy.json
 .ruff_cache/
 
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-*.log
-dump.rdb
+# Node — frontend is built in-image, never ship host artifacts
+frontend/node_modules
+frontend/build
+frontend/.cache
+genie-sidekick/node_modules
+genie-sidekick/dist
 
-# System
-.DS_Store
-Thumbs.db
-
-# Caches
-.cache/
-frontend/node_modules/.cache/
-
-# Deployment artifacts
-.vercel
-
-# Local-only / legacy
-.emergent/
-.gitconfig
-hello-fly/
-memory/test_credentials.md
+# Fly / Local deployment
 .wahlah-secrets.env
 .genie-secrets.env
+.wahlah
+.flyrc
+
+# Docker
+Dockerfile.local
+docker-compose.local.yml
+
+# Local infra wrapper artifacts
+Makefile.local
+start.local.sh
+
+# Logs / scratch / reports
+*.log
+test_reports/
+tests/__snapshots__/
+*.tmp
+
+# Docs — runtime doesn't need them (optional, safe to keep)
+# docs/
+# memory/
+
+# Secrets — Fly/Render inject env at runtime
+.env
+.env.local
+.env.*.local
+.env.*.example
+
+# Temp / uploads
+/tmp/
+uploads/
+**/.uploads/
+*.zip
+*.tar
+*.tar.gz
+.gitkeep

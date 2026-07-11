@@ -1,4 +1,4 @@
-app = "realwah-lah-com"
+app = "wah-lah"
 primary_region = "iad"
 kill_signal = "SIGTERM"
 kill_timeout = "30s"
