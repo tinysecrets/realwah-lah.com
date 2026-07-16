@@ -7,6 +7,9 @@ kill_timeout = "30s"
   PORT = "8001"
   PYTHONUNBUFFERED = "1"
 
+[build]
+  dockerfile = "dockerfile"
+  
 [http_service]
   internal_port = 8001
   force_https = true
