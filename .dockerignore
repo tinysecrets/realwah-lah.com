@@ -1,67 +1,9 @@
-# ============================================================================
-# WAH-LAH — .dockerignore
-# Keep the build context minimal and reproducible.
-# ============================================================================
-
-# VCS / IDE
 .git
-.gitignore
 .github
-.vscode
-.idea
-.DS_Store
-
-# Python caches
-**/__pycache__
-**/*.pyc
-**/.venv
-**/venv
-**/.pytest_cache
-**/.mypy_cache
-**/.ruff_cache
-
-# Node — frontend is built in-image, never ship host artifacts
-frontend/node_modules
-frontend/build
-frontend/.cache
-genie-sidekick/node_modules
-genie-sidekick/dist
-
-# Sibling subprojects not needed by the main image
-genie-sidekick
-hello-fly
-.emergent
-
-# Local infra wrapper artifacts
-.wahlah
-docker-compose.yml
-Makefile
-start.sh
-README.md
-fly.toml
-render.yaml
-
-# Docs — runtime doesn't need them
-docs
-memory
-*.md
-!backend/**/*.md
-
-# Secrets — Fly/Render inject env at runtime
-.env
-**/.env
-**/.env.*
-.wahlah-secrets.env
-.genie-secrets.env
-
-# Logs / scratch / reports
-*.log
-**/test_reports
-**/tests/__snapshots__
-
-# Temp / uploads
-/tmp
-**/uploads
-**/*.zip
-**/*.tar
-**/*.tar.gz
+.fly
+bin/
+automation-hub/
+projects/
+frontend/node_modules/
+backend/__pycache__/
+genie-sidekick/backend/__pycache__/
