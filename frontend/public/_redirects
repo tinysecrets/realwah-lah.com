@@ -1,1 +1,7 @@
+<<<<<<< HEAD
 /* /index.html 200
+=======
+# Cloudflare Pages SPA fallback — every unknown URL serves index.html
+# so React Router can handle /boss, /games, /admin, etc. on direct hits.
+/*    /index.html   200
+>>>>>>> codespace-trout

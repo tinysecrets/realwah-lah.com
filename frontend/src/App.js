@@ -14,7 +14,11 @@ import DepositCelebration from "./components/DepositCelebration";
 import LaunchChecklist from "./components/LaunchChecklist";
 import AdminGiftCards from "./components/AdminGiftCards";
 
+<<<<<<< HEAD
 const BACKEND_URL = import.meta.env?.VITE_BACKEND_URL || process.env?.REACT_APP_BACKEND_URL || "https://api.wah-lah.com";
+=======
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+>>>>>>> codespace-trout
 const API = `${BACKEND_URL}/api`;
 
 axios.defaults.withCredentials = true;

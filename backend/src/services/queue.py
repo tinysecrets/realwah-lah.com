@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
+<<<<<<< HEAD
 
 MONGODB_URI = (
     os.getenv("MONGODB_URI")
@@ -15,5 +16,8 @@ DB_NAME = os.getenv("DB_NAME", "wahlah_prod")
 client = AsyncIOMotorClient(MONGODB_URI)
 db = client[DB_NAME]
 
+=======
+db = AsyncIOMotorClient(os.getenv("MONGO_URI")).wah_lah
+>>>>>>> codespace-trout
 async def queue_transaction(platform, action, payload):
     return await db.task_queue.insert_one({"platform": platform, "action": action, "payload": payload, "status": "pending", "created_at": datetime.now(timezone.utc)})

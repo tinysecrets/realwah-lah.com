@@ -1,5 +1,6 @@
 .git
 .github
+<<<<<<< HEAD
 .fly
 bin/
 automation-hub/
@@ -7,3 +8,35 @@ projects/
 frontend/node_modules/
 backend/__pycache__/
 genie-sidekick/backend/__pycache__/
+=======
+.vscode
+.idea
+.DS_Store
+
+**/__pycache__
+**/*.pyc
+**/.venv
+**/venv
+**/.pytest_cache
+
+frontend/node_modules
+frontend/build
+frontend/.cache
+genie-sidekick
+hello-fly
+.emergent
+
+docs
+memory
+test_reports
+tests
+
+.env
+**/.env
+**/.env.*
+.wahlah-secrets.env
+.genie-secrets.env
+
+*.md
+!backend/**/*.md
+>>>>>>> codespace-trout
