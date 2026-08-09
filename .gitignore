@@ -164,3 +164,4 @@ memory/test_credentials.md
 .wahlah-secrets.env
 .genie-secrets.env
 >>>>>>> codespace-trout
+.env*

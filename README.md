@@ -1,21 +1,17 @@
 <<<<<<< HEAD
 # WAH-LAH Monorepo
 
-**Unified deployment: `wah-lah` on Fly.io**
 
 Both WAH-LAH (backend + frontend) and Genie Sidekick run from this single repo.
 
 ```
 wah-lah.com      → Cloudflare Pages (React)
-api.wah-lah.com  → Fly.io (FastAPI + Genie)
 ```
 
-## Deploy to Fly.io
 
 All secrets already set on `wah-lah`. Just deploy:
 
 ```bash
-flyctl deploy -a wah-lah
 ```
 
 ## Local Dev
@@ -50,9 +46,6 @@ npm install && npm run dev
 These are suspended and no longer used:
 
 ```bash
-flyctl apps destroy realwah-lah-com
-flyctl apps destroy realwah-lah-com-sfupba
-flyctl apps destroy genie-sidekick
 ```
 
 Do NOT delete until `wah-lah` deployment confirms working.
@@ -64,12 +57,10 @@ Monorepo for the WAH-LAH sweepstakes platform.
 | Layer | Host | Path |
 |-------|------|------|
 | Frontend | Cloudflare Pages | `frontend/` |
-| Backend API | Fly.io (`wah-lah`) | `backend/` |
 | Database | MongoDB Atlas | via `MONGO_URL` secret |
 
 ```
 wah-lah.com      → Cloudflare Pages (React SPA)
-api.wah-lah.com  → Fly.io (FastAPI + Playwright)
                        ↓
                  MongoDB Atlas
 ```
@@ -96,7 +87,6 @@ yarn --cwd frontend start
 
 ```bash
 bash scripts/setup-secrets.sh
-# Edit .wahlah-secrets.env with Atlas URI, Stripe, Resend, Cerebras, Cloudflare
 bash scripts/check-deploy-readiness.sh
 ```
 
@@ -104,11 +94,8 @@ Owner defaults in the template:
 - Admin email: `REDACTED_EMAIL`
 - Cash App tag: `REDACTED_CASHTAG`
 
-### 2. Backend → Fly.io
 
 ```bash
-flyctl auth login
-flyctl apps create wah-lah   # first time only
 bash scripts/deploy-all.sh
 ```
 
@@ -151,7 +138,6 @@ bash scripts/verify-wahlah-domain.sh
 | CNAME | `api` | `wah-lah.fly.dev` | DNS only |
 
 ```bash
-flyctl certs add api.wah-lah.com -a wah-lah
 ```
 
 ## Repo layout
@@ -163,7 +149,6 @@ scripts/              deploy-*.sh, setup-secrets.sh, run_local.sh
 .env-examples/        secret templates (safe to commit)
 infra/                render.yaml (alternate), legacy fly paths
 genie-sidekick/       separate Boss Genie sidecar (optional)
-fly.toml              Fly.io config (repo root)
 Dockerfile            Backend production image
 docs/deployment/      Extended guides
 memory/               PRD, roadmap, changelog
