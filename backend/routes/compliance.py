@@ -1,24 +1,4 @@
-<<<<<<< HEAD
-"""Compliance routes — KYC, OFAC, Geoblock, AML, BTC Payout Hold Queue."""
-=======
 """Compliance routes — KYC, OFAC, Geoblock, AML, BTC Payout Hold Queue.
-
-from pymongo import MongoClient
-import os
-
-# Connect to your MongoDB
-client = MongoClient(os.getenv('MONGO_URL'))
-db = client[os.getenv('DB_NAME')]
-users = db.users
-
-# Perform the update
-result = users.update_many(
-    {"state": {"$exists": False}}, 
-    {"$set": {"state": "UNKNOWN"}}
-)
-
-print(f"Migration complete: {result.modified_count} users updated.")
-
 
 All endpoints mounted under /api/ext/compliance. Admin-only routes require
 the `admin_required` dependency from extensions.py.
@@ -29,7 +9,6 @@ Design:
 - Admin: review queues (KYC, payouts, AML, OFAC hits), approve/reject,
   geoblock config, force-refresh OFAC list, compliance overview stats.
 """
->>>>>>> codespace-trout
 from __future__ import annotations
 
 import logging
