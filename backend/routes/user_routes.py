@@ -33,7 +33,10 @@ async def get_current_user(request: Request, db):
         raise HTTPException(status_code=401, detail="Not authenticated")
     
     try:
-        secret = os.environ.get("JWT_SECRET", "sugar-city-secret-key-2024")
+        secret = os.environ.get("JWT_SECRET")
+        if not secret:
+            logger.error("JWT_SECRET not configured in environment")
+            raise HTTPException(status_code=500, detail="Server misconfigured: JWT_SECRET not set")
         payload = jwt.decode(access_token, secret, algorithms=["HS256"])
         user_id = payload.get("sub")
         

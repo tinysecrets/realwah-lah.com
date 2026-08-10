@@ -1,10 +1,19 @@
 import os
 import jwt
+import logging
+import secrets
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "super_secret_dev_key_change_me_in_prod")
+logger = logging.getLogger(__name__)
+
+SECRET_KEY = os.getenv("JWT_SECRET_KEY") or os.getenv("JWT_SECRET")
+if not SECRET_KEY:
+    # Generate a dev-only ephemeral secret if none is provided, but log a warning
+    SECRET_KEY = secrets.token_urlsafe(32)
+    logger.warning("JWT secret not found in environment; generated ephemeral secret for development only. Set JWT_SECRET in production.")
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 REFRESH_TOKEN_EXPIRE_DAYS = 7
