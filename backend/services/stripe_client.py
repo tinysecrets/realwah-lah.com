@@ -21,7 +21,10 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
-import stripe
+try:
+    import stripe
+except Exception:
+    stripe = None
 from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
@@ -60,15 +63,18 @@ class StripeCheckout:
     """Thin async wrapper around the official Stripe Python SDK."""
 
     def __init__(self, api_key: str, webhook_url: str = "", webhook_secret: Optional[str] = None):
+        # If stripe SDK is not installed, allow the app to start but make the
+        # StripeCheckout methods raise informative errors when called.
+        self._stripe_available = stripe is not None
         if not api_key:
             raise ValueError("STRIPE_API_KEY is required")
         self.api_key = api_key
         self.webhook_url = webhook_url
-        # Webhook secret needed only for signature verification on /webhook/stripe.
-        # Pulled from env (STRIPE_WEBHOOK_SECRET) by default so callers don't have
-        # to know about it.
         self.webhook_secret = webhook_secret or os.environ.get("STRIPE_WEBHOOK_SECRET", "")
-        stripe.api_key = api_key
+        if self._stripe_available:
+            stripe.api_key = api_key
+        else:
+            logger.warning("stripe SDK not installed; StripeCheckout will raise if used")
 
     async def create_checkout_session(self, req: CheckoutSessionRequest) -> CheckoutSession:
         def _create() -> Any:
@@ -88,6 +94,8 @@ class StripeCheckout:
                 metadata=req.metadata or {},
             )
 
+        if not self._stripe_available:
+            raise HTTPException(status_code=503, detail="Stripe SDK not installed in this environment")
         try:
             session = await asyncio.to_thread(_create)
         except stripe.error.AuthenticationError as e:
@@ -105,6 +113,8 @@ class StripeCheckout:
         def _retrieve() -> Any:
             return stripe.checkout.Session.retrieve(session_id)
 
+        if not self._stripe_available:
+            raise HTTPException(status_code=503, detail="Stripe SDK not installed in this environment")
         try:
             s = await asyncio.to_thread(_retrieve)
         except stripe.error.AuthenticationError as e:

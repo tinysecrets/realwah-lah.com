@@ -1,7 +1,15 @@
 import os
 import logging
 from typing import Optional, Dict, Any, Tuple
-from playwright.async_api import async_playwright, Browser, Page
+try:
+    from playwright.async_api import async_playwright, Browser, Page
+    PLAYWRIGHT_AVAILABLE = True
+except Exception:
+    async_playwright = None
+    Browser = None
+    Page = None
+    PLAYWRIGHT_AVAILABLE = False
+    # Playwright not installed in this environment; headless features will be disabled.
 from .session_manager import SessionManager
 
 logger = logging.getLogger(__name__)
@@ -31,6 +39,9 @@ class BackendBridge:
     async def initialize(self) -> Tuple[bool, str]:
         """Initialize connection to platform"""
         if self.use_headless:
+            if not PLAYWRIGHT_AVAILABLE:
+                logger.error("Headless automation requested but Playwright is not installed")
+                return False, "Headless automation unavailable"
             return await self._init_headless()
         else:
             return self._init_api()

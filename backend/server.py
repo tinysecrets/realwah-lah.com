@@ -32,7 +32,7 @@ import string
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict
-from services.stripe_client import StripeCheckout, CheckoutSessionRequest
+# Stripe integration removed. Payment endpoints are disabled unless re-enabled via environment and dependencies.
 
 # Game Middleware imports
 from middleware.game_middleware_manager import GameMiddlewareManager
@@ -728,206 +728,17 @@ async def get_deposit_info():
 # Stripe Checkout
 @api_router.post("/checkout/create")
 async def create_checkout(data: CheckoutRequest, request: Request):
-    user = await get_current_user(request)
-    
-    # Validate amount (min $1)
-    if data.amount < MIN_DEPOSIT:
-        raise HTTPException(status_code=400, detail=f"Minimum deposit is ${MIN_DEPOSIT}")
-
-    # Geoblock gate: block deposits from prohibited sweepstakes states.
-    from services.compliance import check_geoblock
-    from services.compliance.geoblock import client_ip_from_request, record_geoblock_event
-    client_ip = client_ip_from_request(request)
-    blocked, geo_reason, detected_state = await check_geoblock(client_ip)
-    await record_geoblock_event(
-        db, user_id=user["id"], ip=client_ip, state=detected_state,
-        blocked=blocked, context="checkout/create",
-    )
-    if blocked:
-        raise HTTPException(status_code=451, detail=f"Deposits unavailable in your region ({geo_reason}).")
-    
-    # Dollar for dollar - credits equal amount
-    credits = data.amount
-    
-    game = await db.games.find_one({"_id": ObjectId(data.game_id)})
-    if not game:
-        raise HTTPException(status_code=404, detail="Game not found")
-    
-    # JIT platform registration: ensure user is registered on the target game
-    # platform BEFORE money is moved. If registration fails, hold the deposit
-    # and an admin alert is emitted by ensure_platform_registered().
-    ok_reg, reg_msg, platform_uid = await ensure_platform_registered(db, user, game)
-    if not ok_reg:
-        raise HTTPException(
-            status_code=409,
-            detail=f"Deposit held. {reg_msg}",
-        )
-    
-    # Create Stripe checkout
-    host_url = str(request.base_url).rstrip("/")
-    webhook_url = f"{host_url}/api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=os.environ["STRIPE_API_KEY"], webhook_url=webhook_url)
-    
-    success_url = f"{data.origin_url}/payment/success?session_id={{CHECKOUT_SESSION_ID}}"
-    cancel_url = f"{data.origin_url}/payment/cancel"
-    
-    checkout_request = CheckoutSessionRequest(
-        amount=data.amount,
-        currency="usd",
-        success_url=success_url,
-        cancel_url=cancel_url,
-        metadata={
-            "user_id": user["id"],
-            "user_email": user["email"],
-            "amount": str(data.amount),
-            "game_id": data.game_id,
-            "game_name": game["name"],
-            "account_name": data.account_name,
-            "credits": str(credits)
-        }
-    )
-    
-    try:
-        session = await stripe_checkout.create_checkout_session(checkout_request)
-    except Exception as e:
-        logger.error(f"Stripe session creation failed: {e}")
-        raise HTTPException(status_code=502, detail=f"Payment provider error: {str(e)}")
-    
-    # Create transaction record
-    transaction = {
-        "user_id": user["id"],
-        "user_email": user["email"],
-        "amount": data.amount,
-        "credits": credits,
-        "game_id": data.game_id,
-        "game_name": game["name"],
-        "account_name": data.account_name,
-        "payment_method": "stripe",
-        "status": "pending",
-        "payment_status": "initiated",
-        "session_id": session.session_id,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "updated_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.payment_transactions.insert_one(transaction)
-    
-    return {"url": session.url, "session_id": session.session_id}
+    # Stripe integration has been removed. Return 503 to indicate card payments unavailable.
+    raise HTTPException(status_code=503, detail="Card payments are disabled in this deployment.")
 
 @api_router.get("/checkout/status/{session_id}")
 async def get_checkout_status(session_id: str, request: Request):
-    # Auth gate — raises 401 if no valid session cookie
-    await get_current_user(request)
-    
-    host_url = str(request.base_url).rstrip("/")
-    webhook_url = f"{host_url}/api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=os.environ["STRIPE_API_KEY"], webhook_url=webhook_url)
-    
-    try:
-        status = await stripe_checkout.get_checkout_status(session_id)
-    except Exception as e:
-        logger.error(f"Stripe status retrieval failed: {e}")
-        raise HTTPException(status_code=502, detail=f"Payment provider error: {str(e)}")
-    
-    # Update transaction
-    transaction = await db.payment_transactions.find_one({"session_id": session_id})
-    if transaction and transaction.get("payment_status") != "paid":
-        new_status = "completed" if status.payment_status == "paid" else ("failed" if status.status == "expired" else "pending")
-        await db.payment_transactions.update_one(
-            {"session_id": session_id},
-            {"$set": {"status": new_status, "payment_status": status.payment_status, "updated_at": datetime.now(timezone.utc).isoformat()}}
-        )
-        
-        # Add credits if paid
-        if status.payment_status == "paid" and transaction.get("payment_status") != "paid":
-            await db.users.update_one(
-                {"_id": ObjectId(transaction["user_id"])},
-                {"$inc": {"credits": transaction["credits"]}}
-            )
-
-        # Distributor Pool payout (belt + suspenders: webhook may have missed)
-        if status.payment_status == "paid":
-            try:
-                await _trigger_pool_payout(session_id)
-            except Exception as e:
-                logging.error(f"Pool payout trigger (status path) error: {e}")
-    
-    game = await db.games.find_one({"_id": ObjectId(transaction["game_id"])}) if transaction else None
-    
-    return {
-        "status": status.status,
-        "payment_status": status.payment_status,
-        "amount": status.amount_total / 100,
-        "game_url": game["game_url"] if game else None,
-        "game_name": game["name"] if game else None,
-        "account_name": transaction["account_name"] if transaction else None
-    }
-
+    # Stripe integration removed; card payment status not available.
+    raise HTTPException(status_code=503, detail="Card payments are disabled in this deployment.")
 @api_router.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
-    body = await request.body()
-    signature = request.headers.get("Stripe-Signature")
-    
-    host_url = str(request.base_url).rstrip("/")
-    webhook_url = f"{host_url}/api/webhook/stripe"
-    stripe_checkout = StripeCheckout(api_key=os.environ["STRIPE_API_KEY"], webhook_url=webhook_url)
-    
-    try:
-        webhook_response = await stripe_checkout.handle_webhook(body, signature)
-        
-        if webhook_response.payment_status == "paid":
-            transaction = await db.payment_transactions.find_one({"session_id": webhook_response.session_id})
-            if transaction and transaction.get("payment_status") != "paid":
-                # Update transaction status
-                await db.payment_transactions.update_one(
-                    {"session_id": webhook_response.session_id},
-                    {"$set": {"status": "completed", "payment_status": "paid", "updated_at": datetime.now(timezone.utc).isoformat()}}
-                )
-                
-                # DUAL-CURRENCY FLOW: Create Sugar Token purchase + Grant bonus Game Credits
-                if currency_service:
-                    try:
-                        success, msg, purchase_id, bonus_id = await currency_service.process_purchase_with_bonus(
-                            user_id=transaction["user_id"],
-                            user_email=transaction["user_email"],
-                            amount_usd=transaction["amount"],
-                            purchase_type=PurchaseType.STRIPE_CARD,
-                            payment_reference=webhook_response.session_id
-                        )
-                        
-                        if success:
-                            logger.info(f"✅ Dual-currency grant: {transaction['user_email']} - {msg}")
-                        else:
-                            logger.error(f"❌ Dual-currency grant failed: {msg}")
-                    except Exception as e:
-                        logger.error(f"Dual-currency processing error: {str(e)}")
-                
-                # BACKWARD COMPATIBILITY: Also update old credits field
-                await db.users.update_one(
-                    {"_id": ObjectId(transaction["user_id"])},
-                    {"$inc": {"credits": transaction["credits"]}}
-                )
-
-                # Distributor Pool payout (idempotent)
-                await _trigger_pool_payout(webhook_response.session_id)
-
-                # AML event for deposit (CTR/SAR threshold tracking)
-                try:
-                    from services.compliance import record_aml_event
-                    await record_aml_event(
-                        db,
-                        user_id=str(transaction.get("user_id")),
-                        event_type="deposit",
-                        amount_usd=float(transaction.get("amount") or 0),
-                        metadata={"session_id": webhook_response.session_id, "method": "stripe"},
-                    )
-                except Exception as e:
-                    logger.error(f"AML record (stripe webhook) error: {e}")
-        
-        return {"status": "ok"}
-    except Exception as e:
-        logging.error(f"Webhook error: {e}")
-        return {"status": "error"}
-
+    # Stripe integration removed. Webhook handler disabled.
+    return {"status": "disabled"}
 
 async def _trigger_pool_payout(session_id: str) -> None: 
     """Idempotent trigger for distributor-pool P2P transfer.

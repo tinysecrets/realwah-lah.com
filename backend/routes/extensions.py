@@ -20,8 +20,19 @@ from pydantic import BaseModel, EmailStr, Field
 from bson import ObjectId
 import bcrypt
 import jwt
-import pyotp
-import qrcode
+try:
+    import pyotp
+    PYOTP_AVAILABLE = True
+except Exception:
+    pyotp = None
+    PYOTP_AVAILABLE = False
+
+try:
+    import qrcode
+    QRCODE_AVAILABLE = True
+except Exception:
+    qrcode = None
+    QRCODE_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -281,6 +292,8 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
     @router.post("/2fa/setup")
     async def twofa_setup(request: Request):
         """Generate a TOTP secret + provisioning URI + QR code (base64)."""
+        if not PYOTP_AVAILABLE or not QRCODE_AVAILABLE:
+            raise HTTPException(status_code=503, detail="2FA is unavailable: required libraries are not installed")
         user = await get_current_user(request)
         secret = pyotp.random_base32()
         issuer = "WAH-LAH"
@@ -305,6 +318,8 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
 
     @router.post("/2fa/enable")
     async def twofa_enable(data: TwoFAVerify, request: Request):
+        if not PYOTP_AVAILABLE:
+            raise HTTPException(status_code=503, detail="2FA is unavailable: required libraries are not installed")
         user = await get_current_user(request)
         db_user = await db.users.find_one({"_id": ObjectId(user["id"])})
         secret = db_user.get("twofa_pending_secret")
@@ -322,6 +337,8 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
 
     @router.post("/2fa/disable")
     async def twofa_disable(data: TwoFAVerify, request: Request):
+        if not PYOTP_AVAILABLE:
+            raise HTTPException(status_code=503, detail="2FA is unavailable: required libraries are not installed")
         user = await get_current_user(request)
         db_user = await db.users.find_one({"_id": ObjectId(user["id"])})
         if not db_user.get("twofa_enabled"):
@@ -338,9 +355,11 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
 
     @router.get("/2fa/status")
     async def twofa_status(request: Request):
+        if not PYOTP_AVAILABLE:
+            return {"enabled": False, "available": False}
         user = await get_current_user(request)
         db_user = await db.users.find_one({"_id": ObjectId(user["id"])})
-        return {"enabled": bool(db_user.get("twofa_enabled", False))}
+        return {"enabled": bool(db_user.get("twofa_enabled", False)), "available": True}
 
     @router.post("/auth/login-2fa")
     async def login_with_2fa(data: TwoFALoginBody, response: Response):
@@ -350,6 +369,8 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
         if not db_user or not _verify_password(data.password, db_user["password_hash"]):
             raise HTTPException(status_code=401, detail="Invalid email or password")
         if db_user.get("twofa_enabled"):
+            if not PYOTP_AVAILABLE:
+                raise HTTPException(status_code=503, detail="2FA unavailable: server is missing support libraries")
             totp = pyotp.TOTP(db_user["twofa_secret"])
             if not totp.verify(data.code, valid_window=1):
                 raise HTTPException(status_code=401, detail="Invalid 2FA code")
