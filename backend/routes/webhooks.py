@@ -1,19 +1,9 @@
-<<<<<<< HEAD
+from fastapi import APIRouter, Request
 
-=======
-from pymongo import MongoClient
-import os
+router = APIRouter(prefix="/api/webhooks", tags=["webhooks"]) 
 
-# Connect to your MongoDB
-client = MongoClient(os.getenv('MONGO_URL'))
-db = client[os.getenv('DB_NAME')]
-users = db.users
-
-# Perform the update
-result = users.update_many(
-    {"state": {"$exists": False}}, 
-    {"$set": {"state": "UNKNOWN"}}
-)
-
-print(f"Migration complete: {result.modified_count} users updated.")
->>>>>>> codespace-trout
+@router.post("/bitcoin")
+async def bitcoin_webhook(request: Request):
+    data = await request.json()
+    # Placeholder handler — integrate BTC webhook processing logic here
+    return {"status": "ok", "received": True}

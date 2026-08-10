@@ -2,11 +2,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 import os
 
-<<<<<<< HEAD
 ROOT_DIR = Path(__file__).resolve().parents[1]
-=======
-ROOT_DIR = Path(__file__).parent
->>>>>>> codespace-trout
 load_dotenv(ROOT_DIR / '.env')
 
 try:
@@ -61,7 +57,6 @@ from config.currency_config import (
 )
 
 # MongoDB connection
-<<<<<<< HEAD
 mongodb_uri = (
     os.environ.get("MONGODB_URI")
     or os.environ.get("MONGO_URL")
@@ -74,11 +69,6 @@ if not mongodb_uri:
     )
 client = AsyncIOMotorClient(mongodb_uri)
 db = client[os.environ.get("DB_NAME", "wahlah_prod")]
-=======
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
->>>>>>> codespace-trout
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
