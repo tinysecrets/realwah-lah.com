@@ -901,7 +901,7 @@ const DepositTab = ({ games, onSuccess }) => {
   const [copied, setCopied] = useState(false);
   const [copiedLightning, setCopiedLightning] = useState(false);
 
-  const suggestions = [10, 20, 50, 100, 200, 500];
+  const suggestions = [10, 25, 50, 100];
 
   const fetchPaymentInfo = useCallback(async () => {
     try {
@@ -971,7 +971,7 @@ const DepositTab = ({ games, onSuccess }) => {
       <div className="section-header">
         <h2>Deposit Funds</h2>
         <p className="sweeps-notice">
-          🎩 Purchase <strong>Tokens</strong> + Get <strong>100% Bonus Game Credits</strong> free! • Example: $10 = 1,000 tokens + 1,000 bonus credits
+          🎩 Purchase <strong>Sweepstakes credit packages</strong> + get <strong>100% Bonus Game Credits</strong> free! • Popular packages: $10, $25, $50, $100
         </p>
       </div>
 
@@ -1034,7 +1034,7 @@ const DepositTab = ({ games, onSuccess }) => {
             <div className="payment-box">
               <p>Secure checkout powered by Stripe</p>
               <button className="btn-primary btn-pay" onClick={handleStripePayment} disabled={isLoading || !amount}>
-                {isLoading ? <span className="btn-loader"></span> : `Pay $${amount || "0"}`}
+                {isLoading ? <span className="btn-loader"></span> : `Buy $${amount || "0"} Sweepstakes Package`}
               </button>
             </div>
           )}
@@ -2295,7 +2295,7 @@ const ManualPaymentModal = ({ user, games, onSave, onClose }) => {
         <h2>Add Credits: {user.name}</h2>
         <form onSubmit={(e) => { e.preventDefault(); onSave({...formData, credits: formData.amount}); }}>
           <div className="quick-amounts">
-            {[10, 20, 50, 100, 200].map((val) => (
+            {[10, 25, 50, 100].map((val) => (
               <button type="button" key={val} className={`quick-btn ${formData.amount === val ? "selected" : ""}`} onClick={() => setFormData({ ...formData, amount: val, credits: val })}>
                 ${val}
               </button>
