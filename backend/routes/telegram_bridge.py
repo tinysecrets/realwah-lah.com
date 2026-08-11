@@ -19,6 +19,14 @@ def build_telegram_router():
 
     @router.post('/webhook')
     async def telegram_webhook(request: Request):
+        # Optional secret token header check (Telegram supports X-Telegram-Bot-Api-Secret-Token)
+        webhook_secret = os.environ.get('TELEGRAM_WEBHOOK_SECRET', '').strip()
+        if webhook_secret:
+            header_secret = request.headers.get('X-Telegram-Bot-Api-Secret-Token')
+            if header_secret != webhook_secret:
+                logger.warning('Incoming Telegram webhook secret mismatch')
+                raise HTTPException(status_code=403, detail='Forbidden')
+
         if not TELEGRAM_BOT_TOKEN:
             logger.warning('Telegram token not configured; webhook will accept payloads but will not fetch files')
         try:
@@ -26,12 +34,24 @@ def build_telegram_router():
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Invalid JSON: {e}")
 
+        # extract basic sender info and enforce allowed users if configured
+        message = payload.get('message') or payload.get('edited_message') or {}
+        user = message.get('from', {}) or {}
+        username = (user.get('username') or '').lower()
+        user_id = str(user.get('id') or '')
+        allowed = os.environ.get('TELEGRAM_ALLOWED_USERS', '').strip()
+        if allowed:
+            allowed_set = {s.strip().lower() for s in allowed.split(',') if s.strip()}
+            if username not in allowed_set and user_id not in allowed_set:
+                logger.info(f'Telegram user not allowed: {username} ({user_id})')
+                # Do not enqueue; respond with forbidden
+                raise HTTPException(status_code=403, detail='User not allowed')
+
         # Save the raw update to the queue for later processing
-        record = {"received_at": int(__import__('time').time()), "update": payload}
+        record = {"received_at": int(__import__('time').time()), "update": payload, 'from_user': {'username': username, 'id': user_id}}
 
         # If there's a photo, attempt to fetch the largest version and store it in assets
         try:
-            message = payload.get('message') or payload.get('edited_message') or {}
             if 'photo' in message and TELEGRAM_BOT_TOKEN:
                 photos = message['photo']
                 # photo list sorted by size asc; pick last
