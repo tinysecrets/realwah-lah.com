@@ -1,170 +1,48 @@
-<<<<<<< HEAD
-# WAH-LAH Monorepo
-
-
-Both WAH-LAH (backend + frontend) and Genie Sidekick run from this single repo.
-
-```
-wah-lah.com      → Cloudflare Pages (React)
-```
-
-
-All secrets already set on `wah-lah`. Just deploy:
-
-```bash
-```
-
-## Local Dev
-
-### Backend
-```bash
-cd backend
-pip install -r requirements.txt
-uvicorn server:app --reload --port 8001
-```
-
-### WAH-LAH Frontend
-```bash
-cd frontend
-yarn install && yarn start
-```
-
-### Genie Sidekick (Local)
-```bash
-# Backend
-cd genie-sidekick/backend
-pip install -r requirements.txt
-uvicorn server:app --reload --port 8000
-
-# Frontend (separate terminal)
-cd genie-sidekick/frontend
-npm install && npm run dev
-```
-
-## Old Apps (Safe to Delete)
-
-These are suspended and no longer used:
-
-```bash
-```
-
-Do NOT delete until `wah-lah` deployment confirms working.
-=======
 # WAH-LAH (wah-lah.com)
 
-Monorepo for the WAH-LAH sweepstakes platform.
+Monorepo for the WAH-LAH sweepstakes platform (backend + frontend) and the Genie Sidekick sidecar.
 
-| Layer | Host | Path |
-|-------|------|------|
-| Frontend | Cloudflare Pages | `frontend/` |
-| Database | MongoDB Atlas | via `MONGO_URL` secret |
+Repo layout
 
 ```
-wah-lah.com      → Cloudflare Pages (React SPA)
-                       ↓
-                 MongoDB Atlas
+backend/              FastAPI app (server.py)
+frontend/             React SPA (Cloudflare Pages)
+genie-sidekick/       sidecar agent (optional)
+scripts/              deployment helpers
+backend/.env.example   environment template (do not commit secrets)
 ```
 
-## Quick start (local)
+Quick start (local)
 
 ```bash
 # Backend
-cp .env-examples/.wahlah-secrets.env.example backend/.env
-# Edit backend/.env — use a local MongoDB or Atlas URI
+cp backend/.env.example backend/.env
+# Edit backend/.env — set MONGODB_URI or other runtime secrets
 pip install -r backend/requirements.txt
-cd backend && uvicorn server:app --reload --port 8001
+cd backend && PYTHONPATH=. uvicorn server:app --reload --port 8001
 
 # Frontend (separate terminal)
 cp frontend/.env.production.example frontend/.env
 # Set REACT_APP_BACKEND_URL=http://localhost:8001
-yarn --cwd frontend install
-yarn --cwd frontend start
+cd frontend && yarn install && yarn start
 ```
 
-## Production deploy
+Deploy notes
 
-### 1. Secrets file (never commit)
+- Keep secrets (OPENROUTER_API_KEY, GITHUB_TOKEN, WHATSAPP_TOKEN, etc.) in host/CI secret stores — do NOT commit them.
+- Use `backend/.env.example` as a template; a helper script exists at `backend/scripts/populate_env_from_env.sh` to write backend/.env from runtime environment variables (local only).
 
-```bash
-bash scripts/setup-secrets.sh
-bash scripts/check-deploy-readiness.sh
-```
-
-Owner defaults in the template:
-- Admin email: `REDACTED_EMAIL`
-- Cash App tag: `REDACTED_CASHTAG`
-
-
-```bash
-bash scripts/deploy-all.sh
-```
-
-Or step by step:
-
-```bash
-npm run deploy:secrets
-npm run deploy:backend
-```
-
-### 3. Frontend → Cloudflare Pages (`wah-lah.com`)
-
-Full guide: [`docs/deployment/CLOUDFLARE_PAGES.md`](docs/deployment/CLOUDFLARE_PAGES.md)
-
-Cloudflare dashboard → **Workers & Pages** → Connect Git → `tinysecrets/realwah-lah.com`:
-
-| Setting | Value |
-|---------|-------|
-| Project name | `wah-lah` |
-| Build command | `cd frontend && yarn install --frozen-lockfile && yarn build` |
-| Output directory | `frontend/build` |
-| `REACT_APP_BACKEND_URL` | `https://api.wah-lah.com` |
-| `NODE_VERSION` | `20` |
-| `CI` | `false` |
-
-Custom domains: `wah-lah.com` + `www.wah-lah.com`
-
-Verify after deploy:
-
-```bash
-bash scripts/verify-wahlah-domain.sh
-```
-
-### 4. DNS (Cloudflare)
-
-| Type | Name | Target | Proxy |
-|------|------|--------|-------|
-| CNAME | `@` | `<project>.pages.dev` | Proxied |
-| CNAME | `www` | `<project>.pages.dev` | Proxied |
-| CNAME | `api` | `wah-lah.fly.dev` | DNS only |
-
-```bash
-```
-
-## Repo layout
+Health check
 
 ```
-backend/              FastAPI app (server.py)
-frontend/             React 19 + CRA → Cloudflare Pages
-scripts/              deploy-*.sh, setup-secrets.sh, run_local.sh
-.env-examples/        secret templates (safe to commit)
-infra/                render.yaml (alternate), legacy fly paths
-genie-sidekick/       separate Boss Genie sidecar (optional)
-Dockerfile            Backend production image
-docs/deployment/      Extended guides
-memory/               PRD, roadmap, changelog
-tests/                manual + integration tests
-```
-
-Save and push:
-
-```bash
-bash scripts/save_and_push.sh "your commit message"
-```
-
-## Health check
-
-```bash
-curl https://api.wah-lah.com/api/health
+curl http://localhost:8001/api/health
 # {"status":"ok","service":"wah-lah",...}
 ```
->>>>>>> codespace-trout
+
+Contributing
+
+- Make feature branches, open PRs against `main`, and run the suite locally before submitting.
+
+Contact
+
+- Admin: REDACTED_EMAIL
