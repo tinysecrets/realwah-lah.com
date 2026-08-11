@@ -343,7 +343,9 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
             return {"enabled": False, "available": False}
         user = await get_current_user(request)
         db_user = await db.users.find_one({"_id": ObjectId(user["id"])})
-        return {"enabled": bool(db_user.get("twofa_enabled", False)), "available": True}
+        # 2FA requires both pyotp and qrcode to be present for setup
+        available = bool(PYOTP_AVAILABLE and QRCODE_AVAILABLE)
+        return {"enabled": bool(db_user.get("twofa_enabled", False)), "available": available}
 
     @router.post("/auth/login-2fa")
     async def login_with_2fa(data: TwoFALoginBody, response: Response):
