@@ -93,7 +93,8 @@ if RESEND_KEY:
         "html": html,
         "text": f"Reset your password: {reset_link} — This link expires in 60 minutes."
     }
-        headers = {"Authorization": f"Bearer {RESEND_KEY}", "Content-Type": "application/json"}",
+    headers = {
+        "Authorization": f"Bearer {RESEND_KEY}",
         "Content-Type": "application/json"
     }
     try:
@@ -107,6 +108,3 @@ if RESEND_KEY:
         print('Error sending via Resend:', e)
 else:
     print('RESEND_API_KEY not configured; email not sent. Preview saved.')
-
-print('Token stored in', store_file)
-print('Reset link:', reset_link)
