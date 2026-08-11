@@ -5,11 +5,7 @@ on:
     branches: ["main"]
     paths:
       - "backend/**"
-<<<<<<< HEAD
-      - "dockerfile"
-=======
       - "Dockerfile"
->>>>>>> codespace-trout
       - "fly.toml"
       - ".github/workflows/fly-deploy.yml"
 
