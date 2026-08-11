@@ -38,7 +38,7 @@ class EmailService:
                 "Content-Type": "application/json"
             }
             # Use the configured API key in a Bearer Authorization header
-            headers["Authorization"] = f"Bearer {self.api_key}"
+            headers["Authorization"] = "Bearer " + self.api_key
 
             payload = {
                 "from": self.from_email,
