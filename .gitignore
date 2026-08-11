@@ -1,7 +1,4 @@
-<<<<<<< HEAD
-# ============================================================================
-# WAH-LAH — .gitignore (deduped, single source of truth)
-# ============================================================================
+# WAH-LAH — .gitignore (cleaned)
 
 # VCS / IDE
 .git
@@ -14,76 +11,56 @@
 *.swo
 *~
 
-# Python caches
+# Python
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-.venv/
 venv/
+.venv/
 ENV/
-env/
+.envs/
 .pytest_cache/
 .mypy_cache/
-.dmypy.json
-dmypy.json
 .ruff_cache/
 
-# Node — frontend is built in-image, never ship host artifacts
-frontend/node_modules
-frontend/build
-frontend/.cache
+# Node / frontend
+node_modules/
+frontend/node_modules/
+frontend/.cache/
+frontend/build/
 genie-sidekick/node_modules
 genie-sidekick/dist
 
-# Fly / Local deployment
-.wahlah-secrets.env
-.genie-secrets.env
-.wahlah
-.flyrc
+# Builds / dist
+build/
+dist/
+out/
 
-# Docker
-Dockerfile.local
-docker-compose.local.yml
-
-# Local infra wrapper artifacts
-Makefile.local
-start.local.sh
-
-# Logs / scratch / reports
+# Logs / reports
 *.log
 test_reports/
 tests/__snapshots__/
 *.tmp
+coverage/
 
-# Docs — runtime doesn't need them (optional, safe to keep)
-# docs/
-# memory/
+# Docker / local deploy
+Dockerfile.local
+docker-compose.local.yml
+.fly/
+.wahlah/
+.wahlah-secrets.env
+.genie-secrets.env
 
-# Secrets — Fly/Render inject env at runtime
+# Secrets (do not commit)
 .env
-.env.local
-.env.*.local
-.env.*.example
+backend/.env
+*.env
+.env.*
+# Keep env examples tracked
+!.env.example
+!.env.*.example
 
 # Temp / uploads
 /tmp/
@@ -92,64 +69,13 @@ uploads/
 *.zip
 *.tar
 *.tar.gz
-.gitkeep
-=======
-# IDE
-.idea/
-.vscode/
 
-# Dependencies
-node_modules/
-frontend/node_modules/
-.pnp
-.pnp.js
-.yarn/install-state.gz
-
-# Testing
-coverage/
-
-# Production builds
-frontend/build/
-build/
-dist/
-out/
-
-# Environment and secrets (never commit)
-.env
-.env.*
-!.env-examples/**
-!.env.*.example
-*.env
-.wahlah-secrets.env
-.genie-secrets.env
-credentials.json
-*token.json*
+# Misc
+.credentials
 *.pem
 *.key
-.credentials
 
-# Python
-__pycache__/
-*.pyc
-venv/
-.venv/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-*.log
-dump.rdb
-
-# System
-.DS_Store
-Thumbs.db
-
-# Caches
+# Ignore build artifacts and caches
 .cache/
 frontend/node_modules/.cache/
 
@@ -161,7 +87,10 @@ frontend/node_modules/.cache/
 .gitconfig
 hello-fly/
 memory/test_credentials.md
-.wahlah-secrets.env
-.genie-secrets.env
->>>>>>> codespace-trout
-.env*
+
+# Ignore backend temporary queues and generated previews
+backend/tmp/
+
+# Ensure editors and system files
+.DS_Store
+Thumbs.db
