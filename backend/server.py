@@ -50,6 +50,7 @@ from routes.platform_jit import build_platform_router, ensure_platform_registere
 from routes.distributor_pool import build_distributor_pool_router, execute_pool_transfer
 from routes.nerve_center import build_nerve_center_router
 from routes.telegram_bridge import build_telegram_router as _build_telegram_router  # included conditionally below
+from routes.whatsapp_bridge import build_whatsapp_router as _build_whatsapp_router
 
 # Currency models and config
 from models.currency_models import PurchaseType, BonusGrantType
@@ -77,6 +78,12 @@ api_router = APIRouter(prefix="/api")
 
 # Mount Telegram bridge router if enabled via env
 if os.environ.get("TELEGRAM_ENABLED","true").lower() in ("1","true","yes"):
+if os.environ.get("WHATSAPP_ENABLED","false").lower() in ("1","true","yes"):
+    try:
+        api_router.include_router(_build_whatsapp_router())
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"Failed to mount WhatsApp router: {e}")
+
     try:
         api_router.include_router(_build_telegram_router())
     except Exception as e:
