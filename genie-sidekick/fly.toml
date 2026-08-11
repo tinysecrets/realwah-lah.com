@@ -1,29 +1,10 @@
-<<<<<<< HEAD
-app = "genie-sidekick"
-primary_region = "iad"
-kill_signal = "SIGTERM"
-kill_timeout = "30s"
-
-[build]
-  dockerfile = "dockerfile"
-
-[env]
-  PORT = "8001"
-  PYTHONUNBUFFERED = "1"
-
-[[vm]]
-  size = "shared-cpu-1x"
-  cpu_kind = "shared"
-  cpus = 1
-  memory = "1024mb"
-=======
 app = "realwah-lah-com"
 kill_signal = "SIGTERM"
 kill_timeout = "30s"
 primary_region = "iad"
 
 [build]
-dockerfile = "Dockerfile"
+  dockerfile = "Dockerfile"
 
 [env]
 PORT = "8001"
@@ -37,14 +18,14 @@ internal_port = 8001
 min_machines_running = 1
 processes = [ "app" ]
 
-  [[http_service.checks]]
+[[http_service.checks]]
   grace_period = "30s"
   interval = "20s"
   method = "GET"
   path = "/api/health"
   timeout = "5s"
 
-  [http_service.concurrency]
+[http_service.concurrency]
   hard_limit = 250
   soft_limit = 200
   type = "requests"
@@ -54,4 +35,3 @@ cpu_kind = "shared"
 cpus = 1
 memory = "1024mb"
 size = "shared-cpu-1x"
->>>>>>> codespace-trout
