@@ -45,9 +45,11 @@ from services.currency_service import CurrencyService
 
 # Feature extensions
 from routes.extensions import build_extensions_router
+from routes.telegram_bridge import build_telegram_router
 from routes.platform_jit import build_platform_router, ensure_platform_registered
 from routes.distributor_pool import build_distributor_pool_router, execute_pool_transfer
 from routes.nerve_center import build_nerve_center_router
+from routes.telegram_bridge import build_telegram_router as _build_telegram_router  # included conditionally below
 
 # Currency models and config
 from models.currency_models import PurchaseType, BonusGrantType
@@ -72,6 +74,14 @@ db = client[os.environ.get("DB_NAME", "wahlah_prod")]
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
+
+# Mount Telegram bridge router if enabled via env
+if os.environ.get("TELEGRAM_ENABLED","true").lower() in ("1","true","yes"):
+    try:
+        api_router.include_router(_build_telegram_router())
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"Failed to mount Telegram router: {e}")
+
 
 # Initialize Game Middleware Manager
 middleware_manager = None
