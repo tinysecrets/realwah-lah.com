@@ -725,16 +725,58 @@ async def get_deposit_info():
         "rate": "1:1"  # Dollar for dollar
     }
 
-# Stripe Checkout
+# Stripe Checkout (fallback behavior)
 @api_router.post("/checkout/create")
 async def create_checkout(data: CheckoutRequest, request: Request):
-    # Stripe integration has been removed. Return 503 to indicate card payments unavailable.
-    raise HTTPException(status_code=503, detail="Card payments are disabled in this deployment.")
+    """
+    Fallback checkout when Stripe is not available:
+    - Records a pending manual payment transaction and returns a frontend pending URL.
+    - Keeps the same request shape so frontend can continue to POST here.
+    """
+    # Require authenticated user
+    user = await get_current_user(request)
+    import uuid as _uuid
+    session_id = str(_uuid.uuid4())
+
+    # Resolve game name if possible (best effort)
+    game_name = ""
+    try:
+        if data.game_id:
+            g = await db.games.find_one({"_id": ObjectId(data.game_id)})
+            if g:
+                game_name = g.get("name", "")
+    except Exception:
+        game_name = ""
+
+    tx = {
+        "session_id": session_id,
+        "user_id": user["id"],
+        "user_email": user.get("email"),
+        "amount": float(data.amount),
+        "credits": int(data.amount),
+        "game_id": data.game_id,
+        "game_name": game_name,
+        "account_name": data.account_name,
+        "payment_method": data.payment_method or "manual",
+        "status": "pending",
+        "payment_status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.payment_transactions.insert_one(tx)
+
+    origin = (data.origin_url or request.headers.get("origin") or os.environ.get("FRONTEND_BASE", "")).rstrip("/")
+    pending_url = f"{origin}/payment/pending/{session_id}" if origin else f"/payment/pending/{session_id}"
+    return {"url": pending_url, "session_id": session_id, "message": "Manual payment recorded. Follow the instructions on the pending payment page to complete your deposit."}
 
 @api_router.get("/checkout/status/{session_id}")
 async def get_checkout_status(session_id: str, request: Request):
-    # Stripe integration removed; card payment status not available.
-    raise HTTPException(status_code=503, detail="Card payments are disabled in this deployment.")
+    """Return stored payment transaction status for a fallback/manual checkout."""
+    tx = await db.payment_transactions.find_one({"session_id": session_id})
+    if not tx:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"session_id": session_id, "status": tx.get("status"), "payment_status": tx.get("payment_status"), "payment_method": tx.get("payment_method")}
+
 @api_router.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
     # Stripe integration removed. Webhook handler disabled.
