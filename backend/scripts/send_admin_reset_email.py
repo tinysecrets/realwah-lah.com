@@ -94,7 +94,7 @@ if RESEND_KEY:
         "text": f"Reset your password: {reset_link} — This link expires in 60 minutes."
     }
     headers = {
-        "Authorization": f"Bearer {RESEND_KEY}",
+        "Authorization": "Bearer " + RESEND_KEY,
         "Content-Type": "application/json"
     }
     try:
