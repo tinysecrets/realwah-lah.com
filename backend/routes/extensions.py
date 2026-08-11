@@ -223,28 +223,12 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
                 "created_at": _now(),
             })
             logger.info(f"Password reset issued for {email}")
-            # Send via Resend when key is configured
+            # Send via Resend using centralized templates when key is configured
             try:
                 from services.email_service import email_service
                 if email_service.api_key and dev_link:
-                    html = f"""
-                    <div style="font-family:Arial,sans-serif;background:#1a0a2e;color:#fff;padding:40px">
-                      <div style="max-width:560px;margin:0 auto;background:#2d1b3d;padding:32px;border-radius:16px;border:2px solid #ff1493">
-                        <h1 style="color:#ff1493;margin:0 0 12px">WAH-LAH</h1>
-                        <h2 style="color:#fff;margin:0 0 16px">Password reset request</h2>
-                        <p>Click the button below to reset your password. This link expires in 1 hour.</p>
-                        <p style="text-align:center;margin:28px 0">
-                          <a href="{dev_link}" style="display:inline-block;background:linear-gradient(135deg,#ff1493,#9b59b6);color:#fff;padding:14px 36px;border-radius:30px;text-decoration:none;font-weight:bold">Reset password</a>
-                        </p>
-                        <p style="color:#aaa;font-size:12px">If you didn't request this, ignore this email.</p>
-                      </div>
-                    </div>
-                    """
-                    ok, msg = email_service.send_email(
-                        to_email=email,
-                        subject="WAH-LAH — Password Reset",
-                        html_content=html,
-                    )
+                    display_name = (user.get('name') or email.split('@')[0]) if user else email.split('@')[0]
+                    ok, msg = email_service.send_password_reset_email(email, display_name, token)
                     email_sent = ok
                     if not ok:
                         logger.warning(f"Resend send failed for {email}: {msg}")

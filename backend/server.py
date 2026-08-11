@@ -310,7 +310,7 @@ async def register(data: UserRegister, response: Response):
     
     # Send welcome email
     try:
-        email_service.send_welcome_email(email, user_name)
+        email_service.send_welcome_rich(email, user_name)
     except Exception as e:
         logger.warning(f"Failed to send welcome email: {str(e)}")
     

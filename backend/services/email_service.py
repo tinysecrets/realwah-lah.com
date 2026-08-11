@@ -206,5 +206,115 @@ class EmailService:
             html_content=html
         )
 
+    def send_welcome_rich(self, to_email: str, name: str) -> tuple[bool, str]:
+        """Send a rich HTML welcome email matching the 'Wah-Lah: The Magic Reveal' dark velvet + gold aesthetic."""
+        frontend = os.environ.get('FRONTEND_URL', 'https://wah-lah.example.com').rstrip('/')
+        html = f"""
+        <!doctype html>
+        <html>
+        <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Welcome to Wah-Lah</title>
+        </head>
+        <body style="margin:0;padding:0;background:linear-gradient(180deg,#0f0410 0%,#260927 100%);font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;">
+          <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+            <tr>
+              <td align="center" style="padding:40px 16px;">
+                <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:16px;overflow:hidden;background:linear-gradient(180deg,rgba(10,3,18,0.9),rgba(30,10,35,0.95));box-shadow:0 20px 60px rgba(0,0,0,0.6);border:1px solid rgba(212,175,55,0.08);">
+
+                  <tr>
+                    <td style="padding:30px 32px 12px;text-align:center;background:linear-gradient(90deg,rgba(212,175,55,0.04),transparent);">
+                      <h1 style="margin:0;font-size:28px;letter-spacing:2px;color:#f7e9c9;font-weight:700;text-shadow:0 2px 8px rgba(0,0,0,0.6);">WAH-LAH<span style="color:#d4af37;margin-left:8px;font-weight:800">THE MAGIC REVEAL</span></h1>
+                      <p style="margin:6px 0 0;color:#cbb98a;font-size:13px;">Welcome to the velvet room — {name}, your sweepstakes journey begins ✨</p>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="padding:22px 32px 10px;color:#e9dfc2;line-height:1.6;font-size:15px;">
+                      <p style="margin:0 0 12px;">Thanks for joining Wah-Lah. You now have access to sweepstakes entries, exclusive games, and VIP bonuses. Here are a few quick ways to get started:</p>
+                      <ul style="margin:0 0 18px 18px;padding:0;color:#e6dab3;">
+                        <li style="margin-bottom:8px;">Play premium titles like Fire Kirin & Panda Master</li>
+                        <li style="margin-bottom:8px;">Purchase Sweepstakes credit packages — $10, $25, $50, $100</li>
+                        <li style="margin-bottom:8px;">Redeem credits or request payouts securely</li>
+                      </ul>
+
+                      <div style="text-align:center;margin-top:8px;margin-bottom:6px;">
+                        <a href="{frontend}" style="display:inline-block;padding:14px 28px;border-radius:999px;background:linear-gradient(90deg,#d4af37,#f7e9c9);color:#1a0a0a;text-decoration:none;font-weight:700;box-shadow:0 6px 18px rgba(212,175,55,0.18);">Begin the Reveal →</a>
+                      </div>
+
+                      <p style="margin:12px 0 0;color:#bfae86;font-size:13px;">If you need help, reply to this email and our support magicians will assist you.</p>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background:linear-gradient(90deg,transparent,rgba(212,175,55,0.02));padding:18px 32px;color:#9d8b66;font-size:12px;text-align:center;">
+                      <div style="margin-bottom:6px;">WAH-LAH — Play Responsibly • 21+ Members • Void where prohibited</div>
+                      <div style="color:#7d6b4e;font-size:11px;">This message was sent from: {self.from_email}</div>
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+        """
+        text = f"Welcome to Wah-Lah, {name}! Visit {frontend} to get started."
+        return self.send_email(to_email=to_email, subject="Welcome to WAH-LAH — The Magic Reveal", html_content=html, text_content=text)
+
+    def send_password_reset_email(self, to_email: str, name: str, token: str) -> tuple[bool, str]:
+        """Send password reset email with secure token link (inline CSS, dark velvet + gold aesthetic)."""
+        frontend = os.environ.get('FRONTEND_URL', 'https://wah-lah.example.com').rstrip('/')
+        reset_path = os.environ.get('PASSWORD_RESET_PATH', '/reset-password')
+        reset_link = f"{frontend}{reset_path}?token={token}"
+
+        html = f"""
+        <!doctype html>
+        <html>
+        <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Password Reset</title>
+        </head>
+        <body style="margin:0;padding:0;background:#0b0410;font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;">
+          <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+            <tr>
+              <td align="center" style="padding:40px 16px;">
+                <table width="600" cellpadding="0" cellspacing="0" role="presentation" style="border-radius:12px;background:linear-gradient(180deg,#12051a,#2b0b2f);border:1px solid rgba(212,175,55,0.06);overflow:hidden;">
+                  <tr>
+                    <td style="padding:24px 28px;text-align:center;">
+                      <h2 style="margin:0;color:#f7e9c9;font-size:22px;">Password Reset Requested</h2>
+                      <p style="margin:6px 0 0;color:#d6c49a;font-size:13px;">Hi {name}, we received a request to reset your password.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:18px 28px;color:#e9dfc2;">
+                      <p style="margin:0 0 12px;">Click the button below to set a new password. For your safety this link expires in 60 minutes.</p>
+                      <div style="text-align:center;margin:18px 0;">
+                        <a href="{reset_link}" style="display:inline-block;padding:12px 26px;border-radius:8px;background:linear-gradient(90deg,#d4af37,#f2e1b6);color:#0b0310;font-weight:700;text-decoration:none;">Reset Password</a>
+                      </div>
+                      <p style="margin:10px 0 0;color:#bfae86;font-size:13px;">If you did not request a password reset, safely ignore this message or contact our support team.</p>
+                      <hr style="border:none;border-top:1px solid rgba(255,255,255,0.03);margin:18px 0;" />
+                      <p style="color:#9d8b66;font-size:11px;margin:0;">If the button does not work, copy & paste the following link into your browser:</p>
+                      <p style="word-break:break-all;color:#bfae86;font-size:12px;">{reset_link}</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:12px 28px 20px;text-align:center;color:#7d6b4e;font-size:11px;">
+                      <div>This email was sent from {self.from_email}</div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+        """
+        text = f"Reset your password: {reset_link} — This link expires in 60 minutes."
+        return self.send_email(to_email=to_email, subject="WAH-LAH Password Reset", html_content=html, text_content=text)
+
 # Global instance
 email_service = EmailService()
