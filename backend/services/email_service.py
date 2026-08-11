@@ -20,6 +20,7 @@ class EmailService:
         self.from_email = custom or os.environ.get("EMAIL_FROM") or default_sandbox
         self.api_url = "https://api.resend.com/emails"
     
+
     def send_email(
         self,
         to_email: str,
@@ -32,43 +33,42 @@ class EmailService:
             if not self.api_key:
                 logger.warning("Resend API key not configured, skipping email")
                 return False, "Email service not configured"
-            
+
             headers = {
-                "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json"
             }
-            # Ensure the Authorization header uses the configured API key
-            headers['Authorization'] = f"Bearer {self.api_key}"
-            
+            # Use the configured API key in a Bearer Authorization header
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
             payload = {
                 "from": self.from_email,
                 "to": [to_email],
                 "subject": subject,
                 "html": html_content
             }
-            
+
             if text_content:
                 payload["text"] = text_content
-            
+
             response = requests.post(
                 self.api_url,
                 json=payload,
                 headers=headers,
                 timeout=10
             )
-            
-            if response.status_code == 200:
+
+            if 200 <= response.status_code < 300:
                 logger.info(f"Email sent to {to_email}: {subject}")
                 return True, "Email sent successfully"
             else:
                 error_msg = f"Email failed: {response.status_code} - {response.text}"
                 logger.error(error_msg)
                 return False, error_msg
-        
+
         except Exception as e:
             logger.error(f"Email error: {str(e)}")
             return False, f"Email error: {str(e)}"
-    
+
     def send_welcome_email(self, to_email: str, name: str) -> tuple[bool, str]:
         """Send welcome email to new users"""
         html = f"""
