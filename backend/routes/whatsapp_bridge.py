@@ -57,6 +57,8 @@ def build_whatsapp_router():
                     from_user = msg.get('from') or ''
                     msg_type = msg.get('type')
                     text = ''
+                    saved_asset = None
+
                     if msg_type == 'text':
                         text = msg.get('text', {}).get('body', '')
                     elif msg_type in ('image', 'audio', 'video', 'document'):
@@ -64,7 +66,6 @@ def build_whatsapp_router():
                         media = msg.get(msg_type, {})
                         media_id = media.get('id')
                         # attempt to fetch media if token present
-                        saved_asset = None
                         if media_id and WHATSAPP_TOKEN:
                             try:
                                 # Get media URL
@@ -76,7 +77,7 @@ def build_whatsapp_router():
                                     j = rinfo.json()
                                     media_url = j.get('url')
                                     if media_url:
-                                        r = requests.get(media_url, headers={'Authorization': f'Bearer {WHATSAPP_TOKEN}'}, timeout=20)
+                                        r = requests.get(media_url, headers={'Authorization': 'Bearer ' + WHATSAPP_TOKEN}, timeout=20)
                                         if r.status_code == 200:
                                             assets_dir = Path(__file__).resolve().parents[2] / 'frontend' / 'public' / 'assets' / 'game_assets'
                                             assets_dir.mkdir(parents=True, exist_ok=True)
@@ -87,11 +88,14 @@ def build_whatsapp_router():
                                             logger.info(f"Saved whatsapp media to {save_path}")
                             except Exception as e:
                                 logger.warning(f'Failed to fetch whatsapp media: {e}')
-                        record = {"received_at": int(__import__('time').time()), "from_user": from_user, "type": msg_type, "text": text}
-                        if saved_asset:
-                            record['saved_asset'] = saved_asset
-                        with QUEUE_FILE.open('a') as fh:
-                            fh.write(json.dumps(record) + "\n")
+
+                    # Build record for all message types and append to queue
+                    record = {"received_at": int(__import__('time').time()), "from_user": from_user, "type": msg_type, "text": text}
+                    if saved_asset:
+                        record['saved_asset'] = saved_asset
+                    with QUEUE_FILE.open('a') as fh:
+                        fh.write(json.dumps(record) + "\n")
+
         return JSONResponse({"status": "ok"})
 
     return router

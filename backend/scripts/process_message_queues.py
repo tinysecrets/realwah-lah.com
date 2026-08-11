@@ -36,8 +36,22 @@ processed = 0
 
 for qname, qfile in queues:
     logger.info(f'Processing queue: {qname} ({qfile})')
+
+    # Atomically rotate the queue file to avoid losing entries appended during processing.
+    pid = os.getpid()
+    processing_file = qfile.with_name(qfile.name + f'.processing.{pid}')
+    try:
+        # Move the current queue to a processing file (atomic on most OSes)
+        qfile.replace(processing_file)
+        # Create a new empty queue file at the original path so webhooks can append
+        qfile.open('a').close()
+        logger.info(f'Rotated queue {qfile} -> {processing_file}')
+    except Exception as e:
+        logger.warning(f'Queue rotation failed, will read in-place: {e}')
+        processing_file = qfile
+
     recs = []
-    with qfile.open('r') as fh:
+    with processing_file.open('r') as fh:
         for line in fh:
             try:
                 recs.append(json.loads(line))
@@ -86,12 +100,13 @@ for qname, qfile in queues:
         except Exception:
             logger.exception('Processing error for record')
 
-    # remove queue file after processing
+    # remove processing file after processing (do not remove the live queue)
     try:
-        qfile.unlink()
-        logger.info(f'Removed queue file {qfile}')
+        if processing_file.exists() and processing_file != qfile:
+            processing_file.unlink()
+            logger.info(f'Removed processing file {processing_file}')
     except Exception as e:
-        logger.warning(f'Could not remove queue file {qfile}: {e}')
+        logger.warning(f'Could not remove processing file {processing_file}: {e}')
 
 logger.info(f'Processed {processed} updates')
 print(f'Processed {processed} updates')
