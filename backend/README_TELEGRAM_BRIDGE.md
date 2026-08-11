@@ -47,6 +47,16 @@ Security & hardening
 - Add rate limiting at the reverse proxy level to prevent abuse.
 - Optionally require PR approval from an additional human reviewer before merging.
 
+Cloudflare & Render
+
+- Store Cloudflare API tokens and zone/account IDs in your host/CI secret store (do not commit). Use these tokens for DNS updates, cache purge, or Pages deployments.
+- For Render, set RENDER_API_KEY and RENDER_SERVICE_ID as secrets in Render's dashboard; use them to trigger service restarts or deployments from the bridge if desired.
+
+CI / GitHub Actions
+
+- Prefer storing OPENROUTER_API_KEY, GITHUB_TOKEN, and other secrets in GitHub Actions secrets (or your CI provider). Do NOT place keys in the repo.
+- Example: use secrets.OPENROUTER_API_KEY and secrets.GITHUB_TOKEN in actions/workflows that may call the bridge or run automated tests.
+
 Troubleshooting
 
 - If PR creation fails, ensure gh is authenticated and GITHUB_REPO is set or repository remote points to GitHub.
