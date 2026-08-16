@@ -22,5 +22,9 @@
   "engines": {
     "node": ">=20"
   },
-  "packageManager": "yarn@1.22.22"
+  "packageManager": "yarn@1.22.22",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "mongoose": "^9.9.2"
+  }
 }
