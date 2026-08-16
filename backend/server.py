@@ -76,6 +76,16 @@ db = client[os.environ.get("DB_NAME", "wahlah_prod")]
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+@api_router.get("/health")
+async def health():
+    try:
+        await db.command("ping")
+        return {"status": "ok", "database": "connected"}
+    except Exception as e:
+        logging.getLogger(__name__).error("Health check database error: %s", e)
+        return {"status": "ok", "database": "error"}
+
+
 # Mount WhatsApp router if enabled via env
 if os.environ.get("WHATSAPP_ENABLED", "false").lower() in ("1", "true", "yes"):
     try:
@@ -279,6 +289,17 @@ def generate_game_password() -> str:
     return "Abc123"
 
 # Auth Endpoints
+
+# Feature extensions: password reset, 2FA, VIP, promos, referrals, etc.
+api_router.include_router(
+    build_extensions_router(
+        db=db,
+        get_current_user=get_current_user,
+        get_admin_user=get_admin_user,
+    )
+)
+
+
 @api_router.post("/auth/register")
 async def register(data: UserRegister, response: Response):
     email = data.email.lower()
@@ -477,3 +498,7 @@ async def get_amoe_status(request: Request):
             "next_eligible": None
         }
 
+
+
+# Mount all API routes.
+app.include_router(api_router)

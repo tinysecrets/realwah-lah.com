@@ -164,7 +164,7 @@ def _create_refresh_token(user_id: str) -> str:
 
 def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
     """Build the APIRouter wired to the provided db + auth helpers."""
-    router = APIRouter(prefix="/api/ext", tags=["extensions"])
+    router = APIRouter(prefix="/ext", tags=["extensions"])
 
     async def _user_lifetime_spend(user_id: str) -> float:
         pipeline = [
