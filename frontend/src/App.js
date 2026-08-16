@@ -251,11 +251,11 @@ const RegisterPage = () => {
       return;
     }
     if (!ageVerified) {
-      setError("You must be 21+ years old to register");
+      setError("You must check the box confirming you are 21+ years old (legal requirement for sweepstakes)");
       return;
     }
     if (!termsAccepted) {
-      setError("You must accept the Terms and Conditions");
+      setError("You must accept the Terms and Conditions to continue");
       return;
     }
     setError("");
@@ -319,15 +319,15 @@ const RegisterPage = () => {
             
             <div className="checkbox-group">
               <label className="checkbox-label">
-                <input data-testid="register-terms" type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} />
+                <input data-testid="register-terms" type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} required />
                 <span className="checkbox-custom"></span>
                 <span>I accept the <a href="#" onClick={(e) => e.preventDefault()}>Terms & Conditions</a></span>
               </label>
               
               <label className="checkbox-label">
-                <input data-testid="register-age-verify" type="checkbox" checked={ageVerified} onChange={(e) => setAgeVerified(e.target.checked)} />
+                <input data-testid="register-age-verify" type="checkbox" checked={ageVerified} onChange={(e) => setAgeVerified(e.target.checked)} required />
                 <span className="checkbox-custom"></span>
-                <span><Shield size={14} /> I am <strong>21+ years old</strong></span>
+                <span><Shield size={14} /> I am <strong>21+ years old</strong> (Required for legal compliance)</span>
               </label>
             </div>
             

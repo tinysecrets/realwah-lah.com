@@ -30,7 +30,7 @@ import jwt
 import secrets
 import string
 from datetime import datetime, timezone, timedelta
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Dict
 # Stripe integration removed. Payment endpoints are disabled unless re-enabled via environment and dependencies.
 
@@ -178,7 +178,7 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str
     name: Optional[str] = None
-    age_verified: bool = False
+    age_verified: bool = Field(default=False, description="Must be true to confirm user is 21+ (legal requirement for sweepstakes)")
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -308,7 +308,7 @@ async def register(data: UserRegister, response: Response):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     if not data.age_verified:
-        raise HTTPException(status_code=400, detail="You must verify you are 18 or older")
+        raise HTTPException(status_code=400, detail="You must verify you are 21+ years old (legal requirement for sweepstakes)")
     
     # Derive display name from email if not provided
     user_name = (data.name or email.split("@")[0]).strip() or email.split("@")[0]
