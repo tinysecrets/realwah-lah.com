@@ -78,12 +78,9 @@ api_router = APIRouter(prefix="/api")
 
 @api_router.get("/health")
 async def health():
-    try:
-        await db.command("ping")
-        return {"status": "ok", "database": "connected"}
-    except Exception as e:
-        logging.getLogger(__name__).error("Health check database error: %s", e)
-        return {"status": "ok", "database": "error"}
+    # Liveness check must never block waiting for MongoDB.
+    # Render uses this endpoint to determine whether the container is alive.
+    return {"status": "ok"}
 
 
 # Mount WhatsApp router if enabled via env
