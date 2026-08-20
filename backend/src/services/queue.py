@@ -2,11 +2,7 @@ import os
 from datetime import datetime, timezone
 from motor.motor_asyncio import AsyncIOMotorClient
 
-MONGODB_URI = (
-    os.getenv("MONGODB_URI")
-    or os.getenv("MONGO_URL")
-    or os.getenv("MONGO_URI")
-)
+MONGODB_URI = os.getenv("MONGODB_URI")
 if not MONGODB_URI:
     raise RuntimeError(
         "MONGODB_URI is required. Set it in .env for local testing or via production secrets."

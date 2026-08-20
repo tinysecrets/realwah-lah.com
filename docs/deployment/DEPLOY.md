@@ -81,21 +81,25 @@ Set production secrets — copy from your current `/app/backend/.env`:
 
 ```bash
 flyctl secrets set \
-  MONGO_URL='mongodb+srv://wahlah_app:YOUR_PASS@wah-lah-prod.xxxxx.mongodb.net/?retryWrites=true&w=majority' \
+   MONGODB_URI='mongodb+srv://wahlah_app:YOUR_PASS@wah-lah-prod.xxxxx.mongodb.net/?retryWrites=true&w=majority' \
   DB_NAME='sugar_city_sweeps' \
   JWT_SECRET='<generate a long random string>' \
   ADMIN_EMAIL='REDACTED_EMAIL' \
   ADMIN_PASSWORD='<your-16+-char-admin-password>' \
-  STRIPE_API_KEY='rk_live_...' \
   RESEND_API_KEY='re_...' \
   EMAIL_FROM='WAH-LAH <onboarding@resend.dev>' \
   CUSTOM_EMAIL_FROM='WAH-LAH <noreply@wah-lah.com>' \
   FRONTEND_URL='https://wah-lah.com' \
   CORS_ORIGINS='https://wah-lah.com,https://www.wah-lah.com' \
-  CARD_PAYMENT_TAG='$WahLah' \
-  CLOUDFLARE_API_TOKEN='cfut_...' \
-  CEREBRAS_API_KEY='csk-...' \
-  CEREBRAS_MODEL='qwen-3-235b-a22b-instruct-2507' \
+   BTC_GATEWAY_API_URL='https://btcpay.example.com' \
+   BTC_GATEWAY_API_KEY='...' \
+   BTCPAY_STORE_ID='...' \
+   BTC_WEBHOOK_SECRET='...' \
+   CEREBRAS_API_KEY='csk-...' \
+   CEREBRAS_MODEL='llama-3.3-70b' \
+   GENIE_FALLBACK_API_KEY='sk-...' \
+   GENIE_FALLBACK_BASE_URL='https://api.openai.com/v1' \
+   GENIE_FALLBACK_MODEL='gpt-4o-mini' \
   PROXY_ENCRYPTION_KEY='<generate a 32-byte Fernet key with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())">' \
   PROXY_DEFAULT_PER_TRANSFER_CAP=500 \
   PROXY_DEFAULT_DAILY_CAP=5000 \
@@ -108,7 +112,10 @@ flyctl secrets set \
   CTR_THRESHOLD_USD=10000 \
   SAR_FREQ_WINDOW_HOURS=24 \
   SAR_FREQ_THRESHOLD=3 \
-  ENFORCE_CANONICAL_HOST=false
+   PERSONA_ENVIRONMENT='production' \
+   TELEGRAM_ENABLED=false \
+   TELEGRAM_ESCALATION_ENABLED=false \
+   TELEGRAM_ESCALATION_CHAT_ID='...'
 ```
 
 Deploy:
@@ -133,12 +140,12 @@ If `/api/health` returns 200, backend is live.
 2. Authorize Cloudflare to access your GitHub
 3. Select your `wah-lah` repo → **Begin setup**
 4. Build configuration:
-   - **Framework preset:** Create React App
+   - **Framework preset:** Vite
    - **Build command:** `cd frontend && yarn install --frozen-lockfile && yarn build`
-   - **Build output directory:** `frontend/build`
+   - **Build output directory:** `frontend/dist`
    - **Root directory:** *(leave blank — repo root)*
 5. **Environment variables** (production):
-   - `REACT_APP_BACKEND_URL` = `https://api.wah-lah.com` *(we'll point this in Step 5)*
+   - `VITE_BACKEND_URL` = `https://api.wah-lah.com` *(we'll point this in Step 5)*
    - `NODE_VERSION` = `20`
 6. **Save and Deploy**.
 

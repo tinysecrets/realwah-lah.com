@@ -11,7 +11,6 @@ from enum import Enum
 
 class PurchaseType(str, Enum):
     """Type of purchase transaction"""
-    STRIPE_CARD = "stripe_card"
     BITCOIN = "bitcoin"
     MANUAL_ADMIN = "manual_admin"
 

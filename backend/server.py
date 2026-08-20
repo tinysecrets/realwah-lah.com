@@ -1,6 +1,11 @@
 from dotenv import load_dotenv
 from pathlib import Path
 import os
+import logging
+
+# Setup logging before any other imports
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT_DIR / '.env')
@@ -24,7 +29,6 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 import re
-import logging
 import bcrypt
 import jwt
 import secrets
@@ -32,11 +36,6 @@ import string
 from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Dict
-# Stripe integration removed. Payment endpoints are disabled unless re-enabled via environment and dependencies.
-
-# Game Middleware imports
-from middleware.game_middleware_manager import GameMiddlewareManager
-from middleware.sugar_sweeps_bridge import SugarSweepsBridge
 
 # Services
 from services.email_service import email_service
@@ -49,8 +48,13 @@ from routes.telegram_bridge import build_telegram_router
 from routes.platform_jit import build_platform_router, ensure_platform_registered
 from routes.distributor_pool import build_distributor_pool_router, execute_pool_transfer
 from routes.nerve_center import build_nerve_center_router
-from routes.telegram_bridge import build_telegram_router as _build_telegram_router  # included conditionally below
-from routes.whatsapp_bridge import build_whatsapp_router as _build_whatsapp_router
+from routes.genie import build_genie_router
+from routes.user_routes import build_user_router
+from routes.compliance import build_compliance_router
+from routes.admin_analytics import build_admin_analytics_router
+from routes.revenue_admin import build_revenue_admin_router
+from routes.gift_cards import build_gift_cards_router
+from routes.webhooks import build_webhooks_router
 
 # Currency models and config
 from models.currency_models import PurchaseType, BonusGrantType
@@ -60,49 +64,49 @@ from config.currency_config import (
 )
 
 # MongoDB connection
-mongodb_uri = (
+mongoodb_uri = (
     os.environ.get("MONGODB_URI")
-    or os.environ.get("MONGO_URL")
-    or os.environ.get("MONGO_URI")
 )
-if not mongodb_uri:
+if not mongoodb_uri:
     raise RuntimeError(
         "MONGODB_URI is required. Set it in the root .env for local testing "
         "or via production environment variables / Fly secrets."
     )
-client = AsyncIOMotorClient(mongodb_uri)
+client = AsyncIOMotorClient(mongoodb_uri)
 db = client[os.environ.get("DB_NAME", "wahlah_prod")]
 
-app = FastAPI()
+app = FastAPI(title="WAH-LAH API", version="1.0.0")
 api_router = APIRouter(prefix="/api")
+
+# CORS Configuration
+cors_origins = [
+    origin.strip()
+    for origin in os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
+    if origin.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @api_router.get("/health")
 async def health():
-    # Liveness check must never block waiting for MongoDB.
-    # Render uses this endpoint to determine whether the container is alive.
-    return {"status": "ok"}
-
-
-# Mount WhatsApp router if enabled via env
-if os.environ.get("WHATSAPP_ENABLED", "false").lower() in ("1", "true", "yes"):
-    try:
-        api_router.include_router(_build_whatsapp_router())
-    except Exception as e:
-        logging.getLogger(__name__).warning(f"Failed to mount WhatsApp router: {e}")
+    """Liveness check endpoint (never blocks on MongoDB)."""
+    return {"status": "ok", "service": "wah-lah"}
 
 # Mount Telegram router if enabled via env
 if os.environ.get("TELEGRAM_ENABLED", "false").lower() in ("1", "true", "yes"):
     try:
-        api_router.include_router(_build_telegram_router())
+        api_router.include_router(build_telegram_router())
+        logger.info("✅ Telegram router mounted")
     except Exception as e:
-        logging.getLogger(__name__).warning(f"Failed to mount Telegram router: {e}")
-
+        logger.warning(f"⚠️ Failed to mount Telegram router: {e}")
 
 # Initialize Game Middleware Manager
 middleware_manager = None
-
-# Initialize Sugar Sweeps Bridge (Master Tank for P2P)
-sugar_sweeps_bridge = None
 
 # Initialize Bonus Service
 bonus_service = None
@@ -119,7 +123,10 @@ COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "false").lower() == "true"
 COOKIE_SAMESITE = os.environ.get("COOKIE_SAMESITE", "lax").lower()
 
 def get_jwt_secret() -> str:
-    return os.environ["JWT_SECRET"]
+    secret = os.environ.get("JWT_SECRET")
+    if not secret:
+        raise ValueError("JWT_SECRET environment variable is required")
+    return secret
 
 # Password hashing
 def hash_password(password: str) -> str:
@@ -132,11 +139,20 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 # JWT Token Management
 def create_access_token(user_id: str, email: str) -> str:
-    payload = {"sub": user_id, "email": email, "exp": datetime.now(timezone.utc) + timedelta(minutes=60), "type": "access"}
+    payload = {
+        "sub": user_id,
+        "email": email,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=60),
+        "type": "access"
+    }
     return jwt.encode(payload, get_jwt_secret(), algorithm=JWT_ALGORITHM)
 
 def create_refresh_token(user_id: str) -> str:
-    payload = {"sub": user_id, "exp": datetime.now(timezone.utc) + timedelta(days=7), "type": "refresh"}
+    payload = {
+        "sub": user_id,
+        "exp": datetime.now(timezone.utc) + timedelta(days=7),
+        "type": "refresh"
+    }
     return jwt.encode(payload, get_jwt_secret(), algorithm=JWT_ALGORITHM)
 
 # Auth Helper
@@ -175,7 +191,10 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str
     name: Optional[str] = None
-    age_verified: bool = Field(default=False, description="Must be true to confirm user is 21+ (legal requirement for sweepstakes)")
+    age_verified: bool = Field(
+        default=False,
+        description="Must be true to confirm user is 21+ (legal requirement for sweepstakes)"
+    )
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -285,7 +304,9 @@ def generate_game_password() -> str:
     """All passwords are preset to Abc123 until explicitly changed by the user."""
     return "Abc123"
 
-# Auth Endpoints
+# ============================================
+# AUTH ENDPOINTS
+# ============================================
 
 # Feature extensions: password reset, 2FA, VIP, promos, referrals, etc.
 api_router.include_router(
@@ -294,6 +315,27 @@ api_router.include_router(
         get_current_user=get_current_user,
         get_admin_user=get_admin_user,
     )
+)
+api_router.include_router(
+    build_genie_router(db=db, get_current_user=get_current_user)
+)
+api_router.include_router(
+    build_user_router(db=db, get_current_user=get_current_user)
+)
+api_router.include_router(
+    build_compliance_router(db=db, get_admin_user=get_admin_user)
+)
+api_router.include_router(
+    build_admin_analytics_router(db=db, get_admin_user=get_admin_user)
+)
+api_router.include_router(
+    build_revenue_admin_router(db=db, get_admin_user=get_admin_user)
+)
+api_router.include_router(
+    build_gift_cards_router(db=db, get_current_user=get_current_user)
+)
+api_router.include_router(
+    build_webhooks_router(db=db)
 )
 
 
@@ -305,7 +347,10 @@ async def register(data: UserRegister, response: Response):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     if not data.age_verified:
-        raise HTTPException(status_code=400, detail="You must verify you are 21+ years old (legal requirement for sweepstakes)")
+        raise HTTPException(
+            status_code=400,
+            detail="You must verify you are 21+ years old (legal requirement for sweepstakes)"
+        )
     
     # Derive display name from email if not provided
     user_name = (data.name or email.split("@")[0]).strip() or email.split("@")[0]
@@ -353,8 +398,24 @@ async def register(data: UserRegister, response: Response):
     access_token = create_access_token(user_id, email)
     refresh_token = create_refresh_token(user_id)
     
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, max_age=3600, path="/")
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, max_age=604800, path="/")
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        max_age=3600,
+        path="/"
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        max_age=604800,
+        path="/"
+    )
     
     return {
         "id": user_id,
@@ -387,7 +448,10 @@ async def login(data: UserLogin, response: Response, request: Request):
         # Increment failed attempts
         await db.login_attempts.update_one(
             {"identifier": identifier},
-            {"$inc": {"count": 1}, "$set": {"locked_until": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()}},
+            {
+                "$inc": {"count": 1},
+                "$set": {"locked_until": (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()}
+            },
             upsert=True
         )
         raise HTTPException(status_code=401, detail="Invalid email or password")
@@ -399,8 +463,24 @@ async def login(data: UserLogin, response: Response, request: Request):
     access_token = create_access_token(user_id, email)
     refresh_token = create_refresh_token(user_id)
     
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, max_age=3600, path="/")
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, max_age=604800, path="/")
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        max_age=3600,
+        path="/"
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=COOKIE_SECURE,
+        samesite=COOKIE_SAMESITE,
+        max_age=604800,
+        path="/"
+    )
     
     return {
         "id": user_id,
@@ -437,7 +517,15 @@ async def refresh_token(request: Request, response: Response):
             raise HTTPException(status_code=401, detail="User not found")
         
         access_token = create_access_token(str(user["_id"]), user["email"])
-        response.set_cookie(key="access_token", value=access_token, httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, max_age=3600, path="/")
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=COOKIE_SECURE,
+            samesite=COOKIE_SAMESITE,
+            max_age=3600,
+            path="/"
+        )
         return {"message": "Token refreshed"}
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -494,8 +582,35 @@ async def get_amoe_status(request: Request):
             "message": "Claim your free credits!",
             "next_eligible": None
         }
+    
+    try:
+        last_claim_dt = datetime.fromisoformat(last_claim)
+        now = datetime.now(timezone.utc)
+        if last_claim_dt.tzinfo is None:
+            last_claim_dt = last_claim_dt.replace(tzinfo=timezone.utc)
+        
+        next_eligible = last_claim_dt + timedelta(hours=24)
+        is_eligible = now >= next_eligible
+        
+        return {
+            "eligible": is_eligible,
+            "message": "Claim your free credits!" if is_eligible else "Already claimed today. Come back tomorrow!",
+            "next_eligible": next_eligible.isoformat() if not is_eligible else None,
+            "last_claimed": last_claim
+        }
+    except (ValueError, TypeError):
+        return {
+            "eligible": True,
+            "message": "Claim your free credits!",
+            "next_eligible": None
+        }
 
+# ============================================
+# MOUNT ALL ROUTERS
+# ============================================
 
-
-# Mount all API routes.
 app.include_router(api_router)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)

@@ -1,0 +1,23 @@
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/wahlah
+      PORT: "10000"
+    depends_on:
+      - mongo
+    ports:
+      - "10000:10000"
+
+volumes:
+  mongo_data:

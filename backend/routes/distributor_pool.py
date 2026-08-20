@@ -387,17 +387,7 @@ def build_distributor_pool_router(db, get_admin_user) -> APIRouter:
                       else f"Proxies near cap: {', '.join(hot)} — raise cap or add another proxy before peak hours.",
         }
 
-        # 4) Stripe key is not the placeholder
-        stripe_key = _os.environ.get("STRIPE_API_KEY", "")
-        stripe_real = bool(stripe_key) and "placeholder" not in stripe_key.lower()
-        check_stripe = {
-            "name": "Stripe API key",
-            "ok": stripe_real,
-            "detail": "Stripe key looks real." if stripe_real
-                      else "STRIPE_API_KEY is a placeholder — deposits will 500 at Stripe. Replace in backend/.env.",
-        }
-
-        checks = [check_coverage, check_freshness, check_capacity, check_stripe]
+        checks = [check_coverage, check_freshness, check_capacity]
         all_ok = all(c["ok"] for c in checks)
         return {
             "ready": all_ok,

@@ -318,22 +318,7 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
         """
         checks: List[dict] = []
 
-        # 1) Stripe
-        sk = os.environ.get("STRIPE_API_KEY", "")
-        pk = os.environ.get("STRIPE_PUBLISHABLE_KEY", "")
-        stripe_live = sk.startswith(("sk_live_", "rk_live_"))
-        stripe_placeholder = "placeholder" in sk.lower() or not sk or not pk
-        checks.append({
-            "key": "stripe",
-            "label": "Stripe API key",
-            "status": "fail" if stripe_placeholder else ("pass" if stripe_live else "warn"),
-            "detail": "LIVE key configured" if stripe_live else (
-                "placeholder or missing PK/SK in .env — replace before launch" if stripe_placeholder else
-                "test-mode key detected (OK for staging)"
-            ),
-        })
-
-        # 2) Games healthy — all have logo_url and accent_color
+        # 1) Games healthy — all have logo_url and accent_color
         games = await db.games.find({"is_active": True}, {"_id": 0}).to_list(length=50)
         missing = [g.get("name") for g in games if not g.get("logo_url") or not g.get("accent_color")]
         checks.append({
@@ -344,7 +329,7 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
                       + (f" · {len(missing)} need assets: {', '.join(missing)}" if missing else ""),
         })
 
-        # 3) Distributor pool — at least 2 active proxies
+        # 2) Distributor pool — at least 2 active proxies
         try:
             active = await db.distributor_proxies.count_documents({"status": "active"})
             total = await db.distributor_proxies.count_documents({})
@@ -357,7 +342,7 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
         except Exception as e:
             checks.append({"key": "pool", "label": "Distributor pool", "status": "warn", "detail": str(e)})
 
-        # 4) Admin alerts clean (no unresolved critical in last 24h)
+        # 3) Admin alerts clean (no unresolved critical in last 24h)
         try:
             cutoff = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
             unresolved = await db.admin_alerts.count_documents({
@@ -374,7 +359,7 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
         except Exception as e:
             checks.append({"key": "alerts", "label": "Alerts", "status": "warn", "detail": str(e)})
 
-        # 5) Compliance — OFAC list refreshed in last 7d
+        # 4) Compliance — OFAC list refreshed in last 7d
         try:
             colls = await db.list_collection_names()
             ofac_meta = await db.ofac_refreshes.find_one(sort=[("refreshed_at", -1)]) if \
@@ -397,7 +382,7 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
         except Exception as e:
             checks.append({"key": "compliance", "label": "Compliance", "status": "warn", "detail": str(e)})
 
-        # 6) At least one redemption path enabled
+        # 5) At least one redemption path enabled
         try:
             from services.feature_flags import get_flags
             flags = await get_flags(db)
@@ -417,7 +402,7 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
         except Exception as e:
             checks.append({"key": "redemption_path", "label": "Redemption path", "status": "warn", "detail": str(e)})
 
-        # 7) Playwright Environment Check
+        # 6) Playwright Environment Check
         try:
             pw_check = subprocess.run(["playwright", "--version"], capture_output=True)
             checks.append({
@@ -433,16 +418,6 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
                 "status": "fail",
                 "detail": "Package missing"
             })
-
-        # 8) Stripe Webhook Secret Check
-        whsec = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
-        whsec_present = whsec.startswith("whsec_")
-        checks.append({
-            "key": "stripe_webhook",
-            "label": "Stripe Webhook Secret",
-            "status": "pass" if whsec_present else "fail",
-            "detail": "whsec_ configured" if whsec_present else "Missing whsec_ key. Webhook signature verification will fail."
-        })
 
         fails = [c for c in checks if c["status"] == "fail"]
         warns = [c for c in checks if c["status"] == "warn"]

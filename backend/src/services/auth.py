@@ -8,7 +8,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 logger = logging.getLogger(__name__)
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY") or os.getenv("JWT_SECRET")
+SECRET_KEY = os.getenv("JWT_SECRET")
 if not SECRET_KEY:
     # Generate a dev-only ephemeral secret if none is provided, but log a warning
     SECRET_KEY = secrets.token_urlsafe(32)
