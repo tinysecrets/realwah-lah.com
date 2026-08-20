@@ -7,7 +7,7 @@ FROM python:3.12.13-slim
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PORT=8001
+    PORT=10000
 
 WORKDIR /app
 
@@ -27,7 +27,7 @@ COPY backend/ ./
 RUN useradd -u 10001 -m wahlah && chown -R wahlah:wahlah /app
 USER wahlah
 
-EXPOSE 8001
+EXPOSE 10000
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["python", "-m", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["sh", "-c", "python -m uvicorn server:app --host 0.0.0.0 --port ${PORT:-10000}"]
