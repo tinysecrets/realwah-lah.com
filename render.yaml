@@ -7,5 +7,7 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
+      - key: MONGODB_URI
+        sync: false
       - key: PORT
         value: "10000"
