@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: real-wah-lah-com
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: "10000"
