@@ -67,11 +67,14 @@ from config.currency_config import (
 # MongoDB connection
 mongoodb_uri = (
     os.environ.get("MONGODB_URI")
+    or os.environ.get("MONGO_URL")
+    or os.environ.get("MONGO_URI")
 )
 if not mongoodb_uri:
     raise RuntimeError(
-        "MONGODB_URI is required. Set it in the root .env for local testing "
-        "or via production environment variables / Fly secrets."
+        "MONGODB_URI (or MONGO_URL / MONGO_URI) is required. Set it in the root "
+        ".env for local testing or via production environment variables "
+        "(Render dashboard, Fly secrets, etc.)."
     )
 client = AsyncIOMotorClient(mongoodb_uri)
 db = client[os.environ.get("DB_NAME", "wahlah_prod")]
