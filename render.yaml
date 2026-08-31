@@ -7,7 +7,20 @@ services:
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
+      # sync: false → set your Atlas connection string in Render Dashboard → Environment
+      - key: MONGO_URL
+        sync: false
       - key: MONGODB_URI
         sync: false
+      - key: DB_NAME
+        value: wahlah_prod
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
       - key: PORT
         value: "10000"
