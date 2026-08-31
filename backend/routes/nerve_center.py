@@ -60,7 +60,7 @@ async def _count(coll, query: dict) -> int:
 
 
 def build_nerve_center_router(db, get_admin_user) -> APIRouter:
-    router = APIRouter(prefix="/api/ext/nerve", tags=["nerve-center"])
+    router = APIRouter(prefix="/ext/nerve", tags=["nerve-center"])
 
     # ======================================================
     # Aggregated overview — the main dashboard payload

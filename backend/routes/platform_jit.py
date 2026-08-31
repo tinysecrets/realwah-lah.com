@@ -174,7 +174,7 @@ class AlertResolveBody(BaseModel):
 
 
 def build_platform_router(db, get_current_user, get_admin_user) -> APIRouter:
-    router = APIRouter(prefix="/api/ext/platform", tags=["platform-jit"])
+    router = APIRouter(prefix="/ext/platform", tags=["platform-jit"])
 
     @router.post("/register")
     async def platform_register(data: RegisterBody, request: Request):

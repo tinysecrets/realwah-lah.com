@@ -192,3 +192,8 @@ def get_user_routes(db):
         ]
     
     return router
+
+
+def build_user_router(db, get_current_user=None):
+    """Factory matching server.py mount contract."""
+    return get_user_routes(db)

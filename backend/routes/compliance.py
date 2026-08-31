@@ -1,7 +1,7 @@
 """Compliance routes — KYC, OFAC, Geoblock, AML, BTC Payout Hold Queue.
 
 All endpoints mounted under /api/ext/compliance. Admin-only routes require
-the `admin_required` dependency from extensions.py.
+the `get_admin_user` dependency from extensions.py.
 
 Design:
 - User-facing: initiate KYC, upload docs, read own status.
@@ -73,8 +73,8 @@ class FlagPayload(BaseModel):
     value: Any
 
 
-def build_compliance_router(db, get_current_user, admin_required) -> APIRouter:
-    router = APIRouter(prefix="/api/ext/compliance", tags=["compliance"])
+def build_compliance_router(db, get_current_user, get_admin_user) -> APIRouter:
+    router = APIRouter(prefix="/ext/compliance", tags=["compliance"])
 
     # ====================================================================
     # User-facing: KYC initiate / status / upload
@@ -243,7 +243,7 @@ def build_compliance_router(db, get_current_user, admin_required) -> APIRouter:
 
     @router.get("/admin/kyc/queue")
     async def admin_kyc_queue(request: Request):
-        await admin_required(request)
+        await get_admin_user(request)
         items = await db["kyc_profiles"].find(
             {"status": {"$in": ["pending", "review"]}},
             {"_id": 0},
@@ -260,7 +260,7 @@ def build_compliance_router(db, get_current_user, admin_required) -> APIRouter:
 
     @router.get("/admin/kyc/{user_id}/{tier}/uploads")
     async def admin_kyc_uploads(user_id: str, tier: str, request: Request):
-        await admin_required(request)
+        await get_admin_user(request)
         docs = await db["kyc_uploads"].find(
             {"user_id": user_id, "tier": tier}, {"_id": 0, "storage_path": 0}
         ).sort("created_at", -1).to_list(50)
@@ -268,7 +268,7 @@ def build_compliance_router(db, get_current_user, admin_required) -> APIRouter:
 
     @router.post("/admin/kyc/decide")
     async def admin_kyc_decide(payload: KycDecisionPayload, request: Request):
-        admin = await admin_required(request)
+        admin = await get_admin_user(request)
         if payload.decision not in ("approve", "reject"):
             raise HTTPException(status_code=400, detail="decision must be 'approve' or 'reject'")
         new_status = "approved" if payload.decision == "approve" else "declined"
@@ -296,7 +296,7 @@ def build_compliance_router(db, get_current_user, admin_required) -> APIRouter:
 
     @router.get("/admin/payouts/queue")
     async def admin_payout_queue(request: Request):
-        await admin_required(request)
+        await get_admin_user(request)
         items = await db["redemption_requests"].find(
             {"status": {"$in": ["hold_admin_review", "pending", "approved"]}},
         ).sort("created_at", -1).to_list(200)
@@ -306,7 +306,7 @@ def build_compliance_router(db, get_current_user, admin_required) -> APIRouter:
 
     @router.post("/admin/payouts/action")
     async def admin_payout_action(payload: PayoutActionPayload, request: Request):
-        admin = await admin_required(request)
+        admin = await get_admin_user(request)
         if payload.action not in ("approve", "reject"):
             raise HTTPException(status_code=400, detail="action must be approve/reject")
         rec = await db["redemption_requests"].find_one({"_id": ObjectId(payload.redemption_id)})
@@ -360,25 +360,25 @@ def build_compliance_router(db, get_current_user, admin_required) -> APIRouter:
 
     @router.get("/admin/aml/events")
     async def admin_aml_events(request: Request, limit: int = 100):
-        await admin_required(request)
+        await get_admin_user(request)
         items = await db["aml_events"].find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
         return items
 
     @router.get("/admin/ofac/hits")
     async def admin_ofac_hits(request: Request, limit: int = 100):
-        await admin_required(request)
+        await get_admin_user(request)
         items = await db["ofac_hits"].find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
         return items
 
     @router.post("/admin/ofac/refresh")
     async def admin_ofac_refresh(request: Request):
-        await admin_required(request)
+        await get_admin_user(request)
         count, source = await load_sdn_list(force=True)
         return {"count": count, "source": source}
 
     @router.get("/admin/geoblock/config")
     async def admin_geoblock_config(request: Request):
-        await admin_required(request)
+        await get_admin_user(request)
         return {
             "blocked_states": list_blocked_states(),
             "note": "Edit BLOCKED_STATES env var and restart backend to modify.",
@@ -386,7 +386,7 @@ def build_compliance_router(db, get_current_user, admin_required) -> APIRouter:
 
     @router.get("/admin/overview")
     async def admin_overview(request: Request):
-        await admin_required(request)
+        await get_admin_user(request)
         pending_kyc = await db["kyc_profiles"].count_documents({"status": {"$in": ["pending", "review"]}})
         approved_kyc = await db["kyc_profiles"].count_documents({"status": "approved"})
         declined_kyc = await db["kyc_profiles"].count_documents({"status": "declined"})
@@ -417,12 +417,12 @@ def build_compliance_router(db, get_current_user, admin_required) -> APIRouter:
 
     @router.get("/admin/feature-flags")
     async def admin_get_flags(request: Request):
-        await admin_required(request)
+        await get_admin_user(request)
         return await _ff_get(db)
 
     @router.patch("/admin/feature-flags")
     async def admin_patch_flag(payload: FlagPayload, request: Request):
-        admin = await admin_required(request)
+        admin = await get_admin_user(request)
         try:
             flags = await _ff_set(db, payload.key, payload.value, actor=admin.get("email"))
         except ValueError as e:

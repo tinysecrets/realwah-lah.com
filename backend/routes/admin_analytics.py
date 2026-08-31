@@ -140,3 +140,8 @@ def get_analytics_routes(db):
         return {"message": "Ticket closed successfully"}
     
     return router
+
+
+def build_admin_analytics_router(db, get_admin_user=None):
+    """Factory matching server.py mount contract."""
+    return get_analytics_routes(db)
