@@ -168,7 +168,7 @@ async def execute_pool_transfer(
 
 
 def build_distributor_pool_router(db, get_admin_user) -> APIRouter:
-    router = APIRouter(prefix="/api/ext/pool", tags=["distributor-pool"])
+    router = APIRouter(prefix="/ext/pool", tags=["distributor-pool"])
 
     @router.get("/admin/health")
     async def get_pool_health(request: Request):

@@ -44,3 +44,10 @@ def register_revenue_admin_routes(api_router: APIRouter, db, get_admin_user):
             deposit_bonus_playthrough_multiplier=body.get("deposit_bonus_playthrough_multiplier"),
             updated_by=admin.get("email", "admin"),
         )
+
+
+def build_revenue_admin_router(db, get_admin_user):
+    """Return an APIRouter with admin revenue endpoints (mounted under /api)."""
+    router = APIRouter(tags=["revenue-admin"])
+    register_revenue_admin_routes(router, db, get_admin_user)
+    return router

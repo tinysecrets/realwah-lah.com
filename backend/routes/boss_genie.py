@@ -131,7 +131,7 @@ def _summarize(obj: Any, max_len: int = 2200) -> str:
 
 
 def build_boss_router(db, get_admin_user):
-    router = APIRouter(prefix="/api/boss", tags=["boss-mode"])
+    router = APIRouter(prefix="/boss", tags=["boss-mode"])
 
     # ---- TOOL IMPLEMENTATIONS ----
     async def tool_get_analytics_snapshot(_args):

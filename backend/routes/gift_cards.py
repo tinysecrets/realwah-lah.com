@@ -54,7 +54,7 @@ class RejectIn(BaseModel):
 
 
 def build_giftcard_router(db, get_current_user, get_admin_user):
-    router = APIRouter(prefix="/api", tags=["gift-cards"])
+    router = APIRouter(tags=["gift-cards"])
 
     # ---- USER ENDPOINTS ----
     @router.get("/giftcard/catalog")
@@ -437,3 +437,7 @@ def build_giftcard_router(db, get_current_user, get_admin_user):
         return {"summary": summary, "checks": checks, "at": datetime.now(timezone.utc).isoformat()}
 
     return router
+
+
+# Alias expected by server.py
+build_gift_cards_router = build_giftcard_router
