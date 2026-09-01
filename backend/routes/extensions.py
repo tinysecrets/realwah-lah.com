@@ -225,7 +225,14 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
                 logger.exception("Password reset email delivery failed")
 
         # Deliberately identical for existing and non-existing accounts.
-        return {"message": "If the email exists, a reset link has been issued."}
+        # In non-production environments, expose the generated token to support
+        # manual reset verification without creating a second system or altering the
+        # production UX.
+        response = {"message": "If the email exists, a reset link has been issued."}
+        if os.environ.get("APP_ENV", "development").strip().lower() not in {"production", "prod"}:
+            response["dev_token"] = token if user else None
+            response["dev_reset_link"] = reset_link if user else None
+        return response
 
     @router.post("/password/reset")
     async def reset_password(data: PasswordResetConfirm):
