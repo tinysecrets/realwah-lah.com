@@ -33,6 +33,7 @@ jobs:
           REACT_APP_BACKEND_URL: https://api.wah-lah.com
           CI: false
 
+      # Keep the deployment workflow active for the current main revision.
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
