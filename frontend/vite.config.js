@@ -9,11 +9,6 @@ export default defineConfig({
   define: {
     'process.env.REACT_APP_BACKEND_URL': JSON.stringify(backendUrl),
   },
-  esbuild: {
-    loader: 'jsx',
-    include: /src\/.*\.jsx?$/,
-    inject: [path.resolve(__dirname, './src/react-hooks-shim.js')],
-  },
   optimizeDeps: {
     esbuildOptions: {
       loader: {
