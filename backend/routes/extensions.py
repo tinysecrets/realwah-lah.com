@@ -16,7 +16,7 @@ import hashlib
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, EmailStr, Field
 from bson import ObjectId
 import bcrypt
@@ -36,13 +36,12 @@ except Exception:
     QRCODE_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
-
 JWT_ALGORITHM = "HS256"
 
 VIP_TIERS = [
-    {"name": "Bronze", "min_spend": 0,     "bonus_pct": 0,  "color": "#cd7f32"},
-    {"name": "Silver", "min_spend": 100,   "bonus_pct": 5,  "color": "#c0c0c0"},
-    {"name": "Gold",   "min_spend": 500,   "bonus_pct": 10, "color": "#ffd700"},
+    {"name": "Bronze", "min_spend": 0, "bonus_pct": 0, "color": "#cd7f32"},
+    {"name": "Silver", "min_spend": 100, "bonus_pct": 5, "color": "#c0c0c0"},
+    {"name": "Gold", "min_spend": 500, "bonus_pct": 10, "color": "#ffd700"},
     {"name": "Platinum", "min_spend": 2000, "bonus_pct": 15, "color": "#e5e4e2"},
     {"name": "Diamond", "min_spend": 10000, "bonus_pct": 25, "color": "#b9f2ff"},
 ]
@@ -50,9 +49,9 @@ VIP_TIERS = [
 
 def compute_vip_tier(total_spend_usd: float) -> Dict[str, Any]:
     tier = VIP_TIERS[0]
-    for t in VIP_TIERS:
-        if total_spend_usd >= t["min_spend"]:
-            tier = t
+    for candidate in VIP_TIERS:
+        if total_spend_usd >= candidate["min_spend"]:
+            tier = candidate
     idx = VIP_TIERS.index(tier)
     if idx < len(VIP_TIERS) - 1:
         nxt = VIP_TIERS[idx + 1]
@@ -163,7 +162,6 @@ def _create_refresh_token(user_id: str) -> str:
 
 
 def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
-    """Build the APIRouter wired to the provided db + auth helpers."""
     router = APIRouter(prefix="/ext", tags=["extensions"])
 
     async def _user_lifetime_spend(user_id: str) -> float:
@@ -193,14 +191,14 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
     async def forgot_password(data: PasswordResetRequest):
         email = data.email.lower()
         user = await db.users.find_one({"email": email})
-        token = _gen_token(32)
-        frontend_url = os.environ.get("FRONTEND_URL", "").rstrip("/")
-        reset_path = os.environ.get("PASSWORD_RESET_PATH", "/reset-password")
-        reset_link = f"{frontend_url}{reset_path}?token={token}" if user and frontend_url else None
-        email_sent = False
 
         if user:
+            token = _gen_token(32)
             now = _now()
+            frontend_url = os.environ.get("FRONTEND_URL", "https://realwah-lah.com").rstrip("/")
+            reset_path = os.environ.get("PASSWORD_RESET_PATH", "/reset-password")
+            reset_link = f"{frontend_url}{reset_path}?token={token}"
+
             await db.password_resets.update_many(
                 {"user_id": str(user["_id"]), "used": False},
                 {"$set": {"used": True, "invalidated_at": now}},
@@ -213,23 +211,21 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
                 "used": False,
                 "created_at": now,
             })
-            logger.info("Password reset issued for %s", email)
+
             try:
                 from services.email_service import email_service
-                if email_service.api_key and reset_link:
+                if not email_service.api_key:
+                    logger.warning("Password reset requested but Resend is not configured")
+                else:
                     display_name = user.get("name") or email.split("@")[0]
                     ok, msg = email_service.send_password_reset_email(email, display_name, token)
-                    email_sent = ok
                     if not ok:
-                        logger.warning("Resend send failed for %s: %s", email, msg)
-            except Exception as e:
-                logger.error("Password reset email error: %s", e)
+                        logger.warning("Password reset email delivery failed: %s", msg)
+            except Exception:
+                logger.exception("Password reset email delivery failed")
 
-        # Do not return the raw reset token. The token belongs only in the email.
-        return {
-            "message": "If the email exists, a reset link has been issued.",
-            "email_sent": email_sent,
-        }
+        # Deliberately identical for existing and non-existing accounts.
+        return {"message": "If the email exists, a reset link has been issued."}
 
     @router.post("/password/reset")
     async def reset_password(data: PasswordResetConfirm):
@@ -245,8 +241,12 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
         if exp < _now():
             await db.password_resets.update_one({"_id": rec["_id"]}, {"$set": {"used": True, "expired_at": _now()}})
             raise HTTPException(status_code=400, detail="Token expired")
+
         new_hash = _hash_password(data.new_password)
-        result = await db.users.update_one({"_id": ObjectId(rec["user_id"])}, {"$set": {"password_hash": new_hash}})
+        result = await db.users.update_one(
+            {"_id": ObjectId(rec["user_id"])},
+            {"$set": {"password_hash": new_hash}},
+        )
         if result.matched_count != 1:
             raise HTTPException(status_code=400, detail="Account no longer exists")
         await db.password_resets.update_one({"_id": rec["_id"]}, {"$set": {"used": True, "used_at": _now()}})
@@ -288,10 +288,12 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
         secret = db_user.get("twofa_pending_secret")
         if not secret:
             raise HTTPException(status_code=400, detail="Start 2FA setup first")
-        totp = pyotp.TOTP(secret)
-        if not totp.verify(data.code, valid_window=1):
+        if not pyotp.TOTP(secret).verify(data.code, valid_window=1):
             raise HTTPException(status_code=400, detail="Invalid code")
-        await db.users.update_one({"_id": ObjectId(user["id"])}, {"$set": {"twofa_secret": secret, "twofa_enabled": True}, "$unset": {"twofa_pending_secret": ""}})
+        await db.users.update_one(
+            {"_id": ObjectId(user["id"])},
+            {"$set": {"twofa_secret": secret, "twofa_enabled": True}, "$unset": {"twofa_pending_secret": ""}},
+        )
         return {"message": "2FA enabled"}
 
     @router.post("/2fa/disable")
@@ -302,10 +304,12 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
         db_user = await db.users.find_one({"_id": ObjectId(user["id"])})
         if not db_user.get("twofa_enabled"):
             raise HTTPException(status_code=400, detail="2FA is not enabled")
-        totp = pyotp.TOTP(db_user["twofa_secret"])
-        if not totp.verify(data.code, valid_window=1):
+        if not pyotp.TOTP(db_user["twofa_secret"]).verify(data.code, valid_window=1):
             raise HTTPException(status_code=400, detail="Invalid code")
-        await db.users.update_one({"_id": ObjectId(user["id"])}, {"$set": {"twofa_enabled": False}, "$unset": {"twofa_secret": ""}})
+        await db.users.update_one(
+            {"_id": ObjectId(user["id"])},
+            {"$set": {"twofa_enabled": False}, "$unset": {"twofa_secret": ""}},
+        )
         return {"message": "2FA disabled"}
 
     @router.get("/2fa/status")
