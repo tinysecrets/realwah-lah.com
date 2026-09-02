@@ -33,9 +33,10 @@ jobs:
           REACT_APP_BACKEND_URL: https://api.wah-lah.com
           CI: false
 
+      # Keep the deployment workflow active for the current main revision.
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy frontend/build --project-name=wah-lah --branch=main
+          command: pages deploy frontend/dist --project-name=wah-lah --branch=main
