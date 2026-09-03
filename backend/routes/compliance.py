@@ -320,23 +320,25 @@ def build_compliance_router(db, get_current_user, get_admin_user) -> APIRouter:
             "reviewer_notes": payload.notes,
             "decided_at": now,
         }
-        # Actual BTC send happens via middleware PayoutEngine on approval;
-        # we call it below. Keep the redemption row authoritative for state.
+        # Actual BTC send happens here on approval via the locally-custodied
+        # HD wallet (services.btc_payout.send_btc). The redemption row remains
+        # authoritative for state: approved on success, approved_payout_failed
+        # when the on-chain send could not be completed.
         if payload.action == "approve":
-            # Defer import to avoid circulars.
             try:
-                from server import middleware_manager  # type: ignore
+                from services import btc_payout
+                from services.btc_processor import get_btc_usd_rate, usd_to_satoshis
+
                 amount_usd = float(rec.get("amount_usd") or 0)
                 btc_address = rec.get("btc_address")
-                ok, msg, payout_id = False, "payout_engine_unavailable", None
-                if middleware_manager and middleware_manager.payout_engine and btc_address and amount_usd > 0:
-                    ok, msg, payout_id = await middleware_manager.process_withdrawal(
-                        user_id=str(rec.get("user_id")),
-                        user_email=rec.get("user_email", ""),
-                        amount_usd=amount_usd,
-                        btc_address=btc_address,
-                    )
-                update["payout_gateway_result"] = {"ok": ok, "msg": msg, "payout_id": payout_id, "at": now}
+                ok, msg, payout_id = False, "payout_sender_unavailable", None
+                if btc_address and amount_usd > 0:
+                    btc_usd_rate = await get_btc_usd_rate()
+                    amount_sat = usd_to_satoshis(amount_usd, btc_usd_rate)
+                    ok, msg, payout_id = await btc_payout.send_btc(btc_address, amount_sat)
+                update["payout_gateway_result"] = {
+                    "ok": ok, "msg": msg, "payout_id": payout_id, "at": now,
+                }
                 if not ok:
                     update["status"] = "approved_payout_failed"
                 else:

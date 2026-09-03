@@ -20,3 +20,5 @@ qrcode[pil]==7.4.2
 geoip2==4.8.0
 sentry-sdk[fastapi]==2.5.1
 resend==2.3.0
+bit==0.8.0
+bip_utils==2.12.2

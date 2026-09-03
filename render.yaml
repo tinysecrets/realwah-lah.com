@@ -47,4 +47,9 @@ services:
         value: "60000"
       - key: PUBLIC_API_URL
         sync: false
+      # Bitcoin payout custody (locally-custodied HD funding wallet)
+      - key: BTC_PAYOUT_XPRV
+        sync: false
+      - key: BTC_PAYOUT_FEE_SAT_PER_BYTE
+        value: "3"
 
