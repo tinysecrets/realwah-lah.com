@@ -472,7 +472,7 @@ async def login(data: UserLogin, response: Response, request: Request):
             await db.login_attempts.delete_one({"identifier": identifier})
     
     user = await db.users.find_one({"email": email})
-    if not user or not verify_password(data.password, user["password_hash"]):
+    if not user or not verify_password(data.password, user.get("password_hash", "")):
         # Increment failed attempts
         await db.login_attempts.update_one(
             {"identifier": identifier},

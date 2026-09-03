@@ -16,7 +16,7 @@ import hashlib
 from datetime import datetime, timezone, timedelta
 from typing import Optional, Dict, Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr, Field
 from bson import ObjectId
 import bcrypt
@@ -195,7 +195,7 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
         if user:
             token = _gen_token(32)
             now = _now()
-            frontend_url = os.environ.get("FRONTEND_URL", "https://realwah-lah.com").rstrip("/")
+            frontend_url = os.environ.get("FRONTEND_URL", "https://wah-lah.com").rstrip("/")
             reset_path = os.environ.get("PASSWORD_RESET_PATH", "/reset-password")
             reset_link = f"{frontend_url}{reset_path}?token={token}"
 
@@ -263,7 +263,7 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
     async def change_password(data: PasswordChangeBody, request: Request):
         user = await get_current_user(request)
         db_user = await db.users.find_one({"_id": ObjectId(user["id"])})
-        if not db_user or not _verify_password(data.current_password, db_user["password_hash"]):
+        if not db_user or not _verify_password(data.current_password, db_user.get("password_hash", "")):
             raise HTTPException(status_code=400, detail="Current password is incorrect")
         await db.users.update_one({"_id": ObjectId(user["id"])}, {"$set": {"password_hash": _hash_password(data.new_password)}})
         return {"message": "Password updated"}
@@ -324,5 +324,27 @@ def build_extensions_router(db, get_current_user, get_admin_user) -> APIRouter:
         user = await get_current_user(request)
         db_user = await db.users.find_one({"_id": ObjectId(user["id"])}, {"twofa_enabled": 1})
         return {"enabled": bool(db_user and db_user.get("twofa_enabled"))}
+
+    @router.post("/auth/login-2fa")
+    async def login_with_2fa(data: TwoFALoginBody, response: Response):
+        """Login that requires a TOTP code when the account has 2FA enabled."""
+        email = data.email.lower()
+        db_user = await db.users.find_one({"email": email})
+        if not db_user or not _verify_password(data.password, db_user.get("password_hash", "")):
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        if db_user.get("twofa_enabled"):
+            if not PYOTP_AVAILABLE:
+                raise HTTPException(status_code=503, detail="2FA unavailable: server is missing support libraries")
+            secret = db_user.get("twofa_secret")
+            if not secret or not pyotp.TOTP(secret).verify(data.code or "", valid_window=1):
+                raise HTTPException(status_code=401, detail="Invalid 2FA code")
+        user_id = str(db_user["_id"])
+        access = _create_access_token(user_id, email)
+        refresh = _create_refresh_token(user_id)
+        cookie_secure = os.environ.get("COOKIE_SECURE", "false").lower() == "true"
+        cookie_samesite = os.environ.get("COOKIE_SAMESITE", "lax")
+        response.set_cookie("access_token", access, httponly=True, secure=cookie_secure, samesite=cookie_samesite, max_age=3600, path="/")
+        response.set_cookie("refresh_token", refresh, httponly=True, secure=cookie_secure, samesite=cookie_samesite, max_age=604800, path="/")
+        return {"id": user_id, "email": email, "name": db_user.get("name"), "role": db_user.get("role", "user")}
 
     return router
