@@ -25,6 +25,10 @@ BLOCKCYPHER_TOKEN = os.getenv("BLOCKCYPHER_TOKEN", "")
 BLOCKCYPHER_HD_WALLET = os.getenv("BLOCKCYPHER_HD_WALLET", "wah_lah_deposits")
 BLOCKCYPHER_XPUB = os.getenv("BLOCKCYPHER_XPUB", "")
 
+# Static deposit address fallback. When set, all deposits use this single
+# address (no HD derivation needed) instead of the HD wallet.
+BTC_STATIC_ADDRESS = os.getenv("BLOCKCYPHER_STATIC_ADDRESS", "")
+
 # Keyless public spot price source (fallback: BLOCKCYPHER_BASE chain endpoint).
 PRICE_URL = os.getenv("BTC_PRICE_URL", "https://api.coinbase.com/v2/prices/BTC-USD/spot")
 
@@ -40,7 +44,7 @@ def _token() -> str:
 
 
 def _has_credentials() -> bool:
-    return bool(BLOCKCYPHER_TOKEN and (BLOCKCYPHER_XPUB or BLOCKCYPHER_HD_WALLET))
+    return bool(BLOCKCYPHER_TOKEN and (BLOCKCYPHER_XPUB or BLOCKCYPHER_HD_WALLET or BTC_STATIC_ADDRESS))
 
 
 def _base_url() -> str:
@@ -78,11 +82,15 @@ def usd_to_satoshis(amount_usd: float, usd_per_btc: float) -> int:
 
 
 async def derive_deposit_address(wallet_name: Optional[str] = None) -> str:
-    """Derive and return the next P2PKH deposit address from the HD wallet.
+    """Return a BTC deposit address.
 
-    BlockCypher maintains a per-wallet derivation counter, so each call yields
-    a fresh, never-reused receiving address — ideal for address-per-deposit.
+    If a static deposit address is configured (BLOCKCYPHER_STATIC_ADDRESS) it is
+    returned as-is. Otherwise the next P2PKH address is derived from the HD
+    wallet (BlockCypher maintains a per-wallet derivation counter, so each call
+    yields a fresh, never-reused receiving address).
     """
+    if BTC_STATIC_ADDRESS:
+        return BTC_STATIC_ADDRESS
     wallet = wallet_name or BLOCKCYPHER_HD_WALLET
     url = f"{_base_url()}/wallets/hd/{wallet}/addresses/derive"
     async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:

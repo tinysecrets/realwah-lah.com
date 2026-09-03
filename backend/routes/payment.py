@@ -11,6 +11,7 @@ Mounted under the shared /api prefix in server.py.
 """
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -25,6 +26,10 @@ from config.currency_config import (
 from models.payment_models import CheckoutCreateRequest, RedemptionRequestPayload
 from services import btc_processor
 from services.currency_service import CurrencyService
+
+# Public base URL of the API — used for outbound webhook callback URLs.
+# Defaults to the Cloudflare proxy domain; override with PUBLIC_API_URL.
+PUBLIC_API_URL = (os.getenv("PUBLIC_API_URL") or "https://api.wah-lah.com").rstrip("/")
 
 
 def _now_iso() -> str:
@@ -162,8 +167,7 @@ def build_payment_router(db, get_current_user, get_admin_user) -> APIRouter:
 
         # Subscribe to on-chain confirmations for this deposit address.
         try:
-            origin = request.headers.get("origin") or "https://wah-lah.com"
-            callback_url = f"{origin}/api/webhooks/bitcoin"
+            callback_url = f"{PUBLIC_API_URL}/api/webhooks/bitcoin"
             webhook_id = await btc_processor.create_webhook(btc_address, callback_url)
             if webhook_id:
                 await db.btc_deposits.update_one(

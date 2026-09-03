@@ -19,7 +19,7 @@ services:
       - key: CORS_ORIGINS
         sync: false
       - key: FRONTEND_URL
-        value: https://realwah-lah.com
+        value: https://wah-lah.com
       - key: PASSWORD_RESET_PATH
         value: /reset-password
       - key: RESEND_API_KEY
@@ -34,3 +34,17 @@ services:
         value: "true"
       - key: PORT
         value: "10000"
+      # Bitcoin deposit processing (BlockCypher)
+      - key: BLOCKCYPHER_TOKEN
+        sync: false
+      - key: BLOCKCYPHER_STATIC_ADDRESS
+        sync: false
+      - key: BLOCKCYPHER_HD_WALLET
+        value: wah_lah_deposits
+      - key: BTC_MIN_CONFIRMATIONS
+        value: "1"
+      - key: BTC_FALLBACK_USD
+        value: "60000"
+      - key: PUBLIC_API_URL
+        sync: false
+
