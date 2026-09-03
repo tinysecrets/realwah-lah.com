@@ -11,6 +11,7 @@ import { ForgotPasswordPage, ResetPasswordPage, SettingsPage, AdminExtensions } 
 import NerveCenter from "./pages/NerveCenter";
 import BossMode from "./pages/BossMode";
 import DepositCelebration from "./components/DepositCelebration";
+import BtcDepositPanel from "./components/BtcDepositPanel";
 import LaunchChecklist from "./components/LaunchChecklist";
 import AdminGiftCards from "./components/AdminGiftCards";
 
@@ -661,6 +662,7 @@ const GamesTab = ({ games, onSuccess }) => {
   const [loadingGame, setLoadingGame] = useState("");
   const [platformAccounts, setPlatformAccounts] = useState({});
   const [celebrate, setCelebrate] = useState(false);
+  const [depositInfo, setDepositInfo] = useState(null);
 
   const copyText = (text, field) => {
     navigator.clipboard.writeText(text);
@@ -694,15 +696,13 @@ const GamesTab = ({ games, onSuccess }) => {
     const amt = Number(amountFor(gameId));
     if (!amt || amt < 1) return toast.error("Minimum deposit is $1");
     setLoadingGame(gameId);
-    // Fire the celebration immediately — user feels the win before the redirect
-    setCelebrate(true);
     try {
-      // JIT registration first
+      // JIT registration first — ensures the user is registered on the game
+      // platform BEFORE money moves. Deposit is held on error.
       try {
         await axios.post(`${API}/ext/platform/register`, { game_id: gameId });
         fetchPlatformAccounts();
       } catch (regErr) {
-        setCelebrate(false);
         toast.error(regErr.response?.data?.detail || "Deposit held: registration failed");
         setLoadingGame("");
         return;
@@ -712,16 +712,21 @@ const GamesTab = ({ games, onSuccess }) => {
         game_id: gameId,
         account_name: "deposit",
         origin_url: window.location.origin,
-        payment_method: "stripe",
+        payment_method: "bitcoin",
       });
-      // Hold the celebration for ~1.4s so the user actually sees it before redirect
-      setTimeout(() => { window.location.href = data.url; }, 1400);
+      // Show the Bitcoin deposit panel (QR + address) and await confirmation.
+      setDepositInfo({ ...data, game_id: gameId });
     } catch (err) {
-      setCelebrate(false);
       toast.error(err.response?.data?.detail || "Failed to create checkout");
     } finally {
       setLoadingGame("");
     }
+  };
+
+  const onDepositCompleted = () => {
+    setDepositInfo(null);
+    setCelebrate(true);
+    onSuccess && onSuccess();
   };
 
   // VIP tier bonus percentage (for badge display)
@@ -738,6 +743,16 @@ const GamesTab = ({ games, onSuccess }) => {
       </div>
 
       {celebrate && <DepositCelebration onDone={() => setCelebrate(false)} />}
+
+      {depositInfo && (
+        <div className="deposit-panel-wrap" data-testid="games-deposit-panel">
+          <BtcDepositPanel
+            deposit={depositInfo}
+            onCompleted={onDepositCompleted}
+            onCancel={() => setDepositInfo(null)}
+          />
+        </div>
+      )}
 
       <div className="games-grid">
         {games.map((game) => {
@@ -894,34 +909,16 @@ const GamesTab = ({ games, onSuccess }) => {
 const DepositTab = ({ games, onSuccess }) => {
   const [selectedGame, setSelectedGame] = useState("");
   const [amount, setAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("stripe");
-  const [cryptoInfo, setCryptoInfo] = useState(null);
-  const [cardInfo, setCardInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [copiedLightning, setCopiedLightning] = useState(false);
+  const [depositInfo, setDepositInfo] = useState(null);
 
   const suggestions = [10, 25, 50, 100];
 
-  const fetchPaymentInfo = useCallback(async () => {
-    try {
-      const [crypto, card] = await Promise.all([
-        axios.get(`${API}/payment/crypto-info`),
-        axios.get(`${API}/payment/card-info`)
-      ]);
-      setCryptoInfo(crypto.data);
-      setCardInfo(card.data);
-    } catch {
-      // Payment info fetch failed silently
-    }
-  }, []);
-
   useEffect(() => {
-    fetchPaymentInfo();
     if (games.length > 0 && !selectedGame) setSelectedGame(games[0].id);
-  }, [games, selectedGame, fetchPaymentInfo]);
+  }, [games, selectedGame]);
 
-  const handleStripePayment = async () => {
+  const handleBtcDeposit = async () => {
     if (!selectedGame) {
       toast.error("Please select a game");
       return;
@@ -946,24 +943,17 @@ const DepositTab = ({ games, onSuccess }) => {
         game_id: selectedGame,
         account_name: "deposit",
         origin_url: window.location.origin,
-        payment_method: "stripe"
+        payment_method: "bitcoin"
       });
-      window.location.href = data.url;
+      setDepositInfo({ ...data, game_id: selectedGame });
     } catch (err) {
       toast.error(err.response?.data?.detail || "Failed to create checkout");
     } finally { setIsLoading(false); }
   };
 
-  const copyToClipboard = (text, isLightning = false) => {
-    navigator.clipboard.writeText(text);
-    if (isLightning) {
-      setCopiedLightning(true);
-      setTimeout(() => setCopiedLightning(false), 2000);
-    } else {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-    toast.success("Copied!");
+  const onDepositCompleted = () => {
+    setDepositInfo(null);
+    onSuccess && onSuccess();
   };
 
   return (
@@ -1011,69 +1001,32 @@ const DepositTab = ({ games, onSuccess }) => {
         <div className="form-section">
           <label>Payment Method</label>
           <div className="payment-methods">
-            {[
-              { id: "stripe", label: "Card", icon: <CreditCard size={20} /> },
-              { id: "crypto", label: "Crypto", icon: <span className="btc-icon">₿</span> },
-              { id: "cards", label: "Cash Cards", icon: <DollarSign size={20} /> }
-            ].map((method) => (
-              <button
-                key={method.id}
-                data-testid={`method-${method.id}`}
-                className={`method-btn ${paymentMethod === method.id ? "active" : ""}`}
-                onClick={() => setPaymentMethod(method.id)}
-              >
-                {method.icon}
-                <span>{method.label}</span>
-              </button>
-            ))}
+            <button
+              data-testid="method-bitcoin"
+              className="method-btn active"
+            >
+              <span className="btc-icon">₿</span>
+              <span>Bitcoin (BTC)</span>
+            </button>
           </div>
         </div>
 
         <div className="payment-details">
-          {paymentMethod === "stripe" && (
+          {depositInfo ? (
+            <BtcDepositPanel
+              deposit={depositInfo}
+              onCompleted={onDepositCompleted}
+              onCancel={() => setDepositInfo(null)}
+            />
+          ) : (
             <div className="payment-box">
-              <p>Secure checkout powered by Stripe</p>
-              <button className="btn-primary btn-pay" onClick={handleStripePayment} disabled={isLoading || !amount}>
-                {isLoading ? <span className="btn-loader"></span> : `Buy $${amount || "0"} Sweepstakes Package`}
+              <p>Secure crypto checkout — your credits are added once the Bitcoin payment confirms.</p>
+              <p className="note" style={{ fontWeight: 600, color: "var(--neon-cyan)" }}>
+                Purchase Sweepstakes credit packages + get 100% Bonus Game Credits free!
+              </p>
+              <button className="btn-primary btn-pay" onClick={handleBtcDeposit} disabled={isLoading || !amount}>
+                {isLoading ? <span className="btn-loader"></span> : `Deposit $${amount || "0"} with Bitcoin ₿`}
               </button>
-            </div>
-          )}
-
-          {paymentMethod === "crypto" && cryptoInfo && (
-            <div className="payment-box crypto-box">
-              <h3 style={{fontSize: '18px', marginBottom: '20px', color: 'var(--neon-cyan)'}}>Bitcoin (BTC)</h3>
-              <div className="qr-code">
-                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${cryptoInfo.btc_address}`} alt="BTC QR" />
-              </div>
-              <div className="wallet-address">
-                <span style={{fontSize: '10px'}}>{cryptoInfo.btc_address}</span>
-                <button className="copy-btn" onClick={() => copyToClipboard(cryptoInfo.btc_address, false)}>
-                  {copied ? <Check size={16} /> : <Copy size={16} />}
-                </button>
-              </div>
-              
-              <h3 style={{fontSize: '18px', margin: '30px 0 20px', color: 'var(--neon-gold)'}}>Lightning Network ⚡</h3>
-              <div className="wallet-address">
-                <span style={{fontSize: '9px', wordBreak: 'break-all'}}>{cryptoInfo.lightning_address}</span>
-                <button className="copy-btn" onClick={() => copyToClipboard(cryptoInfo.lightning_address, true)}>
-                  {copiedLightning ? <Check size={16} /> : <Copy size={16} />}
-                </button>
-              </div>
-              
-              <p className="note" style={{marginTop: '25px'}}>Send ${amount || "0"} worth of BTC via either method</p>
-              <p className="note">Contact support with TX ID after payment</p>
-            </div>
-          )}
-
-          {paymentMethod === "cards" && cardInfo && (
-            <div className="payment-box manual-box">
-              <div className="pay-tag">{cardInfo.tag}</div>
-              <button className="copy-btn-full" onClick={() => copyToClipboard(cardInfo.tag)}>
-                <Copy size={16} /> Copy Tag
-              </button>
-              <p className="note">Send ${amount || "0"} via Cash App or Chime to the tag above</p>
-              <p className="note">Include your email in the note/memo</p>
-              <p className="note">Contact support after payment for credit activation</p>
             </div>
           )}
         </div>

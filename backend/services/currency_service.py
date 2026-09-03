@@ -187,7 +187,149 @@ class CurrencyService:
         except Exception as e:
             logger.error(f"Purchase with bonus error: {str(e)}")
             return False, f"Error: {str(e)}", None, None
-    
+
+    async def create_pending_btc_purchase(
+        self,
+        user_id: str,
+        user_email: str,
+        amount_usd: float,
+        btc_address: str,
+        btc_satoshis: int,
+        btc_usd_rate: float,
+        payment_reference: Optional[str] = None,
+        expires_at: Optional[str] = None,
+        deposit_index: Optional[int] = None,
+    ) -> Tuple[bool, str, Optional[str]]:
+        """
+        Create a PENDING Sugar Token purchase held until the BTC deposit is
+        confirmed on-chain (≥1 confirmation).
+
+        LEGAL MODEL: The shop record must NOT be marked completed until the
+        buyer's money has actually arrived on the blockchain. Tokens and bonus
+        Game Credits are only credited once the webhook confirms the deposit.
+
+        Returns: (success, message, btc_deposit_id)
+        """
+        try:
+            sugar_tokens = calculate_sugar_tokens(amount_usd)
+            now = datetime.now(timezone.utc)
+
+            deposit_id = str(uuid4())
+            deposit_doc = {
+                "id": deposit_id,
+                "user_id": user_id,
+                "user_email": user_email,
+                "amount_usd": amount_usd,
+                "sugar_tokens": sugar_tokens,
+                "btc_address": btc_address,
+                "btc_satoshis": btc_satoshis,
+                "btc_usd_rate": btc_usd_rate,
+                "payment_reference": payment_reference,
+                "deposit_index": deposit_index,
+                "status": "pending",
+                "confirmations": 0,
+                "tx_hash": None,
+                "created_at": now.isoformat(),
+                "expires_at": expires_at or (now + timedelta(hours=24)).isoformat(),
+                "completed_at": None,
+                "webhook_id": None,
+            }
+            await self.db.btc_deposits.insert_one(deposit_doc)
+
+            # Purchase record exists but is pending — no token/credit delta yet.
+            purchase_doc = {
+                "id": str(uuid4()),
+                "user_id": user_id,
+                "user_email": user_email,
+                "amount_usd": amount_usd,
+                "sugar_tokens": sugar_tokens,
+                "purchase_type": PurchaseType.BITCOIN.value,
+                "payment_reference": deposit_id,
+                "status": "pending",
+                "created_at": now.isoformat(),
+                "completed_at": None,
+            }
+            await self.db.sugar_token_purchases.insert_one(purchase_doc)
+
+            logger.info(f"⏳ Pending BTC purchase created: {user_email} ${amount_usd} -> {btc_address}")
+            return True, "Deposit address ready — waiting for Bitcoin confirmation", deposit_id
+
+        except Exception as e:
+            logger.error(f"Pending BTC purchase error: {str(e)}")
+            return False, f"Error: {str(e)}", None
+
+    async def complete_btc_purchase(
+        self,
+        deposit_id: str,
+        tx_hash: str,
+        confirmations: int = 1,
+        payment_reference: Optional[str] = None,
+    ) -> Tuple[bool, str]:
+        """
+        Finalize a BTC deposit once confirmed on-chain: mark the purchase
+        completed, credit Sugar Tokens, and grant bonus Game Credits.
+
+        This is called from the BlockCypher webhook (and the manual admin
+        fallback). Idempotent: a deposit in a completed state is a no-op.
+        """
+        try:
+            deposit = await self.db.btc_deposits.find_one({"id": deposit_id})
+            if not deposit:
+                return False, "Deposit not found"
+            if deposit.get("status") == "completed":
+                return True, "Deposit already completed"
+
+            user_id = deposit.get("user_id")
+            user_email = deposit.get("user_email")
+            amount_usd = float(deposit.get("amount_usd") or 0)
+
+            now = datetime.now(timezone.utc)
+
+            # Flip purchase from pending -> completed.
+            await self.db.sugar_token_purchases.update_one(
+                {"payment_reference": deposit_id},
+                {"$set": {
+                    "status": "completed",
+                    "payment_reference": payment_reference or tx_hash,
+                    "completed_at": now.isoformat(),
+                }},
+            )
+
+            # Credit Sugar Tokens + bonus Game Credits (dual-currency model).
+            purchase_success, purchase_msg, purchase_id = await self.create_sugar_token_purchase(
+                user_id, user_email, amount_usd, PurchaseType.BITCOIN, payment_reference or tx_hash
+            )
+            if not purchase_success:
+                # Keep deposit pending so a retry can reconcile later.
+                return False, purchase_msg
+
+            bonus_credits = calculate_bonus_credits(calculate_sugar_tokens(amount_usd))
+            await self.grant_bonus_credits(
+                user_id, user_email, bonus_credits,
+                BonusGrantType.PURCHASE_BONUS,
+                source_purchase_id=purchase_id,
+                metadata={"btc_deposit_id": deposit_id, "tx_hash": tx_hash},
+            )
+
+            # Mark the deposit completed.
+            await self.db.btc_deposits.update_one(
+                {"id": deposit_id},
+                {"$set": {
+                    "status": "completed",
+                    "tx_hash": tx_hash,
+                    "confirmations": max(confirmations, 1),
+                    "payment_reference": payment_reference or tx_hash,
+                    "completed_at": now.isoformat(),
+                }},
+            )
+
+            logger.info(f"✅ BTC deposit completed: {user_email} ${amount_usd} tx={tx_hash}")
+            return True, f"Deposit completed ({amount_usd} USD)"
+
+        except Exception as e:
+            logger.error(f"Complete BTC purchase error: {str(e)}")
+            return False, f"Error: {str(e)}"
+
     async def claim_amoe_daily(
         self,
         user_id: str,

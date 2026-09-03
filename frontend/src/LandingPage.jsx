@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowRight, Zap, Shield, DollarSign, Gift, Gamepad2, CreditCard, Bitcoin,
+  ArrowRight, Zap, Shield, Gift, Gamepad2, CreditCard, Bitcoin,
   Clock, ChevronDown, Sparkles, Users, Lock
 } from 'lucide-react';
 import './LandingPage.css';
@@ -302,7 +302,7 @@ const LandingPage = () => {
               turn into <span className="lp-hero-gold">real Bitcoin.</span>
             </h1>
             <p className="lp-hero-desc">
-              One lobby. Seven premium sweepstakes platforms. Deposit with card, Cash App or crypto — redeem winnings straight to your Bitcoin wallet. It's the <em>wah-lah</em> moment, on demand.
+              One lobby. Seven premium sweepstakes platforms. Deposit with Bitcoin — redeem winnings straight to your wallet. It's the <em>wah-lah</em> moment, on demand.
             </p>
             <div className="lp-hero-btns">
               <Link to="/register" className="lp-btn-primary" data-testid="hero-register-btn">
@@ -408,7 +408,7 @@ const LandingPage = () => {
         <div className="lp-steps">
           {[
             { num: '01', title: 'Claim Free Credits', desc: 'Pick up 100 free credits every 24 hours — no purchase necessary. Required by law. Encouraged by us.', Icon: Gift },
-            { num: '02', title: 'Purchase Tokens',    desc: 'Top up with card, crypto, or Cash App. Every purchase ships with matched bonus Game Credits.', Icon: CreditCard },
+            { num: '02', title: 'Purchase Tokens',    desc: 'Top up with Bitcoin. Every purchase ships with matched bonus Game Credits.', Icon: CreditCard },
             { num: '03', title: 'Play the Bill',      desc: 'Seven premium platforms — Fire Kirin, Juwa, Orion Stars and more — one login.', Icon: Gamepad2 },
             { num: '04', title: 'Cash Out in BTC',    desc: 'Redeem winnings straight to your Bitcoin or Lightning wallet. Fast, clean, final.', Icon: Bitcoin },
           ].map((step, idx) => (
@@ -429,30 +429,16 @@ const LandingPage = () => {
         <div className="lp-payments-inner">
           <div className="lp-payments-text">
             <span className="lp-section-tag">The Till</span>
-            <h2 className="lp-section-title">Deposit your way.</h2>
+            <h2 className="lp-section-title">Deposit with Bitcoin.</h2>
             <p className="lp-section-desc">
-              Credit-card quick, crypto discreet, Cash App instant. Every rail lands credits in seconds.
+              Secure, discreet, no card processor middleman. Credits land the moment your payment confirms on-chain.
             </p>
             <div className="lp-payment-methods">
-              <div className="lp-payment-card" data-testid="payment-stripe">
-                <div className="lp-payment-icon"><CreditCard size={22} /></div>
-                <div>
-                  <h4>Card Payment</h4>
-                  <p>Visa, Mastercard · Stripe secured</p>
-                </div>
-              </div>
               <div className="lp-payment-card" data-testid="payment-crypto">
                 <div className="lp-payment-icon lp-payment-icon-btc"><Bitcoin size={22} /></div>
                 <div>
-                  <h4>Bitcoin &amp; Lightning</h4>
-                  <p>On-chain or Lightning Network</p>
-                </div>
-              </div>
-              <div className="lp-payment-card" data-testid="payment-cashapp">
-                <div className="lp-payment-icon lp-payment-icon-cash"><DollarSign size={22} /></div>
-                <div>
-                  <h4>Cash App &amp; Chime</h4>
-                  <p>Instant US transfers</p>
+                  <h4>Bitcoin (BTC)</h4>
+                  <p>On-chain Bitcoin · 1 confirmation</p>
                 </div>
               </div>
             </div>

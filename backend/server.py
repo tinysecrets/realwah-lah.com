@@ -55,6 +55,7 @@ from routes.admin_analytics import build_admin_analytics_router
 from routes.revenue_admin import build_revenue_admin_router
 from routes.gift_cards import build_gift_cards_router
 from routes.webhooks import build_webhooks_router
+from routes.payment import build_payment_router
 from routes.boss_genie import build_boss_router
 
 # Currency models and config
@@ -364,6 +365,13 @@ api_router.include_router(
 )
 api_router.include_router(
     build_webhooks_router(db=db)
+)
+api_router.include_router(
+    build_payment_router(
+        db=db,
+        get_current_user=get_current_user,
+        get_admin_user=get_admin_user,
+    )
 )
 
 
