@@ -708,7 +708,7 @@ const GamesTab = ({ games, onSuccess }) => {
         return;
       }
       const { data } = await axios.post(`${API}/checkout/create`, {
-        amount: amt,
+        amount_usd: amt,
         game_id: gameId,
         account_name: "deposit",
         origin_url: window.location.origin,
@@ -939,7 +939,7 @@ const DepositTab = ({ games, onSuccess }) => {
         return;
       }
       const { data } = await axios.post(`${API}/checkout/create`, {
-        amount: parseFloat(amount),
+        amount_usd: parseFloat(amount),
         game_id: selectedGame,
         account_name: "deposit",
         origin_url: window.location.origin,
