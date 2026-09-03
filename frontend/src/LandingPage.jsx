@@ -4,6 +4,7 @@ import {
   ArrowRight, Zap, Shield, Gift, Gamepad2, CreditCard, Bitcoin,
   Clock, ChevronDown, Sparkles, Users, Lock
 } from 'lucide-react';
+import GAME_COVER_ART from './components/GameCoverArt';
 import './LandingPage.css';
 
 /* ---------------------------------------------------------------------------
@@ -160,13 +161,13 @@ const GameIcons = {
 };
 
 const GAME_PLATFORMS = [
-  { id: 1, name: 'Fire Kirin',   desc: 'Underwater fishing arena',     accent: '#D43B86', Icon: GameIcons.FireKirin },
-  { id: 2, name: 'Juwa',         desc: 'Slot-room cherry classics',    accent: '#FF2D6E', Icon: GameIcons.Juwa },
-  { id: 3, name: 'Orion Stars',  desc: 'Galactic constellation reels', accent: '#5AB8FF', Icon: GameIcons.OrionStars },
-  { id: 4, name: 'Ultra Panda',  desc: 'Bamboo arcade rush',           accent: '#6BBF59', Icon: GameIcons.UltraPanda },
-  { id: 5, name: 'Panda Master', desc: 'Jade-ring skill matches',      accent: '#1B7F4D', Icon: GameIcons.PandaMaster },
-  { id: 6, name: 'Game Vault',   desc: 'Trophy-room gold classics',    accent: '#FFD700', Icon: GameIcons.GameVault },
-  { id: 7, name: 'vBlink',       desc: 'Crystal match madness',        accent: '#B87DFF', Icon: GameIcons.vBlink },
+  { id: 1, name: 'Fire Kirin',   desc: 'Underwater fishing arena',     accent: '#D43B86', Icon: GameIcons.FireKirin, Cover: GAME_COVER_ART.FireKirin },
+  { id: 2, name: 'Juwa',         desc: 'Slot-room cherry classics',    accent: '#FF2D6E', Icon: GameIcons.Juwa, Cover: GAME_COVER_ART.Juwa },
+  { id: 3, name: 'Orion Stars',  desc: 'Galactic constellation reels', accent: '#5AB8FF', Icon: GameIcons.OrionStars, Cover: GAME_COVER_ART.OrionStars },
+  { id: 4, name: 'Ultra Panda',  desc: 'Bamboo arcade rush',           accent: '#6BBF59', Icon: GameIcons.UltraPanda, Cover: GAME_COVER_ART.UltraPanda },
+  { id: 5, name: 'Panda Master', desc: 'Jade-ring skill matches',      accent: '#1B7F4D', Icon: GameIcons.PandaMaster, Cover: GAME_COVER_ART.PandaMaster },
+  { id: 6, name: 'Game Vault',   desc: 'Trophy-room gold classics',    accent: '#FFD700', Icon: GameIcons.GameVault, Cover: GAME_COVER_ART.GameVault },
+  { id: 7, name: 'vBlink',       desc: 'Crystal match madness',        accent: '#B87DFF', Icon: GameIcons.vBlink, Cover: GAME_COVER_ART.VBlink },
 ];
 
 const StatCounter = ({ end, label, prefix = '', suffix = '' }) => {
@@ -368,6 +369,7 @@ const LandingPage = () => {
         <div className="lp-games-grid">
           {GAME_PLATFORMS.map((game, idx) => {
             const Icon = game.Icon;
+            const Cover = game.Cover;
             return (
               <div
                 key={game.id}
@@ -376,8 +378,11 @@ const LandingPage = () => {
                 data-testid={`game-card-${game.id}`}
               >
                 <div className="lp-game-halo" aria-hidden />
-                <div className="lp-game-art">
-                  <Icon />
+                <div className="lp-game-cover">
+                  <Cover />
+                  <div className="lp-cover-badge" style={{ background: `linear-gradient(135deg, ${game.accent}, #00000055)` }}>
+                    <Icon />
+                  </div>
                 </div>
                 <h3 className="lp-game-name">{game.name}</h3>
                 <p className="lp-game-desc">{game.desc}</p>
