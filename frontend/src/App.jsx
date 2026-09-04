@@ -7,7 +7,7 @@ import { Eye, EyeOff, Gamepad2, CreditCard, Users, BarChart3, Settings, LogOut, 
 import MasterControlHub from "./components/MasterControlHub";
 import MasterControl from "./components/MasterControl";
 import LandingPage from "./LandingPage";
-import { coverForName } from "./components/GameCoverArt";
+import { coverForName, logoForName } from "./components/GameCoverArt";
 import { ForgotPasswordPage, ResetPasswordPage, SettingsPage, AdminExtensions } from "./pages/Extensions";
 import NerveCenter from "./pages/NerveCenter";
 import BossMode from "./pages/BossMode";
@@ -770,11 +770,21 @@ const GamesTab = ({ games, onSuccess }) => {
             >
               {(() => {
                 const Cover = coverForName(game.name);
-                return Cover ? (
+                const Logo = logoForName(game.name);
+                if (!Cover && !Logo) return null;
+                return (
                   <div className={`pd-cover ${registered ? "pd-cover-ok" : ""}`}>
-                    <Cover />
+                    {Logo ? (
+                      <>
+                        <img className="pd-cover-logo" src={Logo} alt={game.name}
+                          onError={(e) => { e.target.style.display = "none"; }} />
+                        {Cover ? <div className="pd-cover-fallback"><Cover /></div> : null}
+                      </>
+                    ) : (
+                      <Cover />
+                    )}
                   </div>
-                ) : null;
+                );
               })()}
               <CardGenie pose={game.id?.charCodeAt(0) % 2 === 0 ? "lamp" : "peek"} />
               {bonusPct > 0 && (

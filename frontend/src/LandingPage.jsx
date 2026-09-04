@@ -4,7 +4,7 @@ import {
   ArrowRight, Zap, Shield, Gift, Gamepad2, CreditCard, Bitcoin,
   Clock, ChevronDown, Sparkles, Users, Lock
 } from 'lucide-react';
-import GAME_COVER_ART from './components/GameCoverArt';
+import GAME_COVER_ART, { logoForName } from './components/GameCoverArt';
 import './LandingPage.css';
 
 /* ---------------------------------------------------------------------------
@@ -161,13 +161,13 @@ const GameIcons = {
 };
 
 const GAME_PLATFORMS = [
-  { id: 1, name: 'Fire Kirin',   desc: 'Underwater fishing arena',     accent: '#D43B86', Icon: GameIcons.FireKirin, Cover: GAME_COVER_ART.FireKirin },
-  { id: 2, name: 'Juwa',         desc: 'Slot-room cherry classics',    accent: '#FF2D6E', Icon: GameIcons.Juwa, Cover: GAME_COVER_ART.Juwa },
-  { id: 3, name: 'Orion Stars',  desc: 'Galactic constellation reels', accent: '#5AB8FF', Icon: GameIcons.OrionStars, Cover: GAME_COVER_ART.OrionStars },
-  { id: 4, name: 'Ultra Panda',  desc: 'Bamboo arcade rush',           accent: '#6BBF59', Icon: GameIcons.UltraPanda, Cover: GAME_COVER_ART.UltraPanda },
-  { id: 5, name: 'Panda Master', desc: 'Jade-ring skill matches',      accent: '#1B7F4D', Icon: GameIcons.PandaMaster, Cover: GAME_COVER_ART.PandaMaster },
-  { id: 6, name: 'Game Vault',   desc: 'Trophy-room gold classics',    accent: '#FFD700', Icon: GameIcons.GameVault, Cover: GAME_COVER_ART.GameVault },
-  { id: 7, name: 'vBlink',       desc: 'Crystal match madness',        accent: '#B87DFF', Icon: GameIcons.vBlink, Cover: GAME_COVER_ART.VBlink },
+  { id: 1, name: 'Fire Kirin',   desc: 'Underwater fishing arena',     accent: '#D43B86', Icon: GameIcons.FireKirin, Cover: GAME_COVER_ART.FireKirin, Logo: '/game-logos/fire-kirin.png' },
+  { id: 2, name: 'Juwa',         desc: 'Slot-room cherry classics',    accent: '#FF2D6E', Icon: GameIcons.Juwa, Cover: GAME_COVER_ART.Juwa, Logo: '/game-logos/juwa.png' },
+  { id: 3, name: 'Orion Stars',  desc: 'Galactic constellation reels', accent: '#5AB8FF', Icon: GameIcons.OrionStars, Cover: GAME_COVER_ART.OrionStars, Logo: '/game-logos/orion-stars.png' },
+  { id: 4, name: 'Ultra Panda',  desc: 'Bamboo arcade rush',           accent: '#6BBF59', Icon: GameIcons.UltraPanda, Cover: GAME_COVER_ART.UltraPanda, Logo: '/game-logos/ultra-panda.png' },
+  { id: 5, name: 'Panda Master', desc: 'Jade-ring skill matches',      accent: '#1B7F4D', Icon: GameIcons.PandaMaster, Cover: GAME_COVER_ART.PandaMaster, Logo: '/game-logos/panda-master.png' },
+  { id: 6, name: 'Game Vault',   desc: 'Trophy-room gold classics',    accent: '#FFD700', Icon: GameIcons.GameVault, Cover: GAME_COVER_ART.GameVault, Logo: '/game-logos/game-vault.png' },
+  { id: 7, name: 'vBlink',       desc: 'Crystal match madness',        accent: '#B87DFF', Icon: GameIcons.vBlink, Cover: GAME_COVER_ART.VBlink, Logo: '/game-logos/vblink.png' },
 ];
 
 const StatCounter = ({ end, label, prefix = '', suffix = '' }) => {
@@ -370,6 +370,7 @@ const LandingPage = () => {
           {GAME_PLATFORMS.map((game, idx) => {
             const Icon = game.Icon;
             const Cover = game.Cover;
+            const Logo = game.Logo;
             return (
               <div
                 key={game.id}
@@ -379,7 +380,11 @@ const LandingPage = () => {
               >
                 <div className="lp-game-halo" aria-hidden />
                 <div className="lp-game-cover">
-                  <Cover />
+                  <img className="lp-game-logo" src={Logo} alt={game.name} loading="lazy"
+                    onError={(e) => { e.target.style.display = 'none'; }} />
+                  <div className="lp-logo-fallback" data-svg={Logo}>
+                    <Cover />
+                  </div>
                   <div className="lp-cover-badge" style={{ background: `linear-gradient(135deg, ${game.accent}, #00000055)` }}>
                     <Icon />
                   </div>

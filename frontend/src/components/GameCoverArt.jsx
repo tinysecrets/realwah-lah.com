@@ -280,4 +280,22 @@ export function coverForName(name = '') {
   return art ? GAME_COVER_ART[art] : null;
 }
 
+/* Genuine self-hosted brand logos (the real, recognizable platform artwork).
+ * Preferred over the SVG cover art above. Keyed by the same NAME_KEYS mapping. */
+export const GAME_LOGO_URLS = {
+  FireKirin: '/game-logos/fire-kirin.png',
+  Juwa: '/game-logos/juwa.png',
+  OrionStars: '/game-logos/orion-stars.png',
+  UltraPanda: '/game-logos/ultra-panda.png',
+  PandaMaster: '/game-logos/panda-master.png',
+  GameVault: '/game-logos/game-vault.png',
+  VBlink: '/game-logos/vblink.png',
+};
+
+export function logoForName(name = '') {
+  const key = String(name).toLowerCase().trim();
+  const art = NAME_KEYS[key];
+  return art ? GAME_LOGO_URLS[art] : null;
+}
+
 export default GAME_COVER_ART;
