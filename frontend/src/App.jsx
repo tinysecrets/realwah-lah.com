@@ -3,9 +3,10 @@ import "./NewApp.css";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useSearchParams, Link } from "react-router-dom";
 import axios from "axios";
 import { Toaster, toast } from "sonner";
-import { Eye, EyeOff, Gamepad2, CreditCard, Users, BarChart3, Settings, LogOut, History, Shield, Wallet, Copy, Check, ChevronRight, Sparkles, Star, Download, ArrowDownToLine, ArrowUpFromLine, RefreshCw, DollarSign, Menu, X, Clock, Activity, Wand2, Rocket, Gift } from "lucide-react";
+import { Eye, EyeOff, Gamepad2, CreditCard, Users, BarChart3, Settings, LogOut, History, Shield, Wallet, Copy, Check, ChevronRight, Sparkles, Star, Download, ArrowDownToLine, ArrowUpFromLine, RefreshCw, DollarSign, Menu, X, Clock, Activity, Wand2, Rocket, Gift, Server } from "lucide-react";
 import MasterControlHub from "./components/MasterControlHub";
 import MasterControl from "./components/MasterControl";
+import DistributorPanel from "./components/DistributorPanel";
 import LandingPage from "./LandingPage";
 import { coverForName, logoForName } from "./components/GameCoverArt";
 import { ForgotPasswordPage, ResetPasswordPage, SettingsPage, AdminExtensions } from "./pages/Extensions";
@@ -497,6 +498,9 @@ const Dashboard = () => {
                 </button>
                 <button data-testid="nav-admin-ext-btn" className="btn-icon" onClick={() => navigate("/admin/extensions")} title="Admin Extensions">
                   <BarChart3 size={20} />
+                </button>
+                <button data-testid="nav-distributors-btn" className="btn-icon" onClick={() => navigate("/admin/distributors")} title="Distributor Pool — your game accounts" style={{ color: "#e8b854" }}>
+                  <Server size={20} />
                 </button>
               </>
             )}
@@ -2030,6 +2034,7 @@ const AdminPanel = () => {
     { id: "users", label: "Users", icon: <Users size={18} /> },
     { id: "transactions", label: "Transactions", icon: <CreditCard size={18} /> },
     { id: "extensions", label: "Ops / Pool / Alerts", icon: <Shield size={18} /> },
+    { id: "distributors", label: "Distributors", icon: <Server size={18} /> },
   ];
 
   return (
@@ -2167,6 +2172,11 @@ const AdminPanel = () => {
         {activeTab === "extensions" && (
           <div className="admin-section">
             <AdminExtensions embedded />
+          </div>
+        )}
+        {activeTab === "distributors" && (
+          <div className="admin-section">
+            <DistributorPanel />
           </div>
         )}
       </main>
@@ -2313,6 +2323,7 @@ function App() {
             <Route path="/admin/extensions" element={<Navigate to="/admin" replace />} />
             <Route path="/master-control" element={<ProtectedRoute adminOnly><MasterControlHub /></ProtectedRoute>} />
             <Route path="/master-control/:platformId" element={<ProtectedRoute adminOnly><MasterControl /></ProtectedRoute>} />
+            <Route path="/admin/distributors" element={<ProtectedRoute adminOnly><DistributorPanel /></ProtectedRoute>} />
           </Routes>
         </BrowserRouter>
         <Toaster position="top-center" richColors />

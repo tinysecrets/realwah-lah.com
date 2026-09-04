@@ -98,6 +98,30 @@ HUB_CONFIGS: Dict[str, dict] = {
     "bitbetwin": {
         "label": "BitBetWin",
         "base_url": "https://bitbetwin.cc",
+        # API base URL — the Next.js JSON backend is served from the same origin
+        # (confirmed 2026-09-04). Login is POST /api/users/login/ with
+        # {"email","password"} returning the user object with a top-level
+        # "token" field. HTTP fast-path is far more reliable than the Playwright
+        # scrape, which is intermittently blocked by the site's login rate
+        # limiter (429) + bot detection.
+        "api_base_url": "https://bitbetwin.cc",
+        "api_paths": {
+            "login": "/api/users/login/",
+            # Transfer endpoint — TBD (requires a non-rate-limited authenticated
+            # session to capture the exact path). Set from your own logged-in
+            # browser session: DevTools -> Network -> do one small transfer,
+            # copy the Method + path, then set "transfer" and the
+            # api_fields.recipient/.amount/.platform field names below.
+            # "transfer": "/api/...",
+        },
+        "api_fields": {
+            "username": "email",
+            "password": "password",
+            "token": "token",  # top-level key in the /api/users/login/ response
+            # "recipient": "username",   # field name carrying the player username
+            # "amount": "amount",
+            # "platform": "platform",
+        },
         "login_path": "/login",
         "dashboard_path": "/platforms",
         "selectors": {
