@@ -5,7 +5,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { Gift, Check, X, RefreshCw, Clock, Mail } from "lucide-react";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://api.wah-lah.com";
 const API = `${BACKEND_URL}/api`;
 
 const AdminGiftCards = () => {

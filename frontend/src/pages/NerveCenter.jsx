@@ -3,7 +3,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import "./NerveCenter.css";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL || "https://api.wah-lah.com"}/api`;
 
 const ASCII = String.raw`
 ███╗   ██╗███████╗██████╗ ██╗   ██╗███████╗     ██████╗███████╗███╗   ██╗████████╗███████╗██████╗

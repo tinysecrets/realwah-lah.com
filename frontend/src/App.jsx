@@ -16,6 +16,7 @@ import DepositCelebration from "./components/DepositCelebration";
 import BtcDepositPanel from "./components/BtcDepositPanel";
 import LaunchChecklist from "./components/LaunchChecklist";
 import AdminGiftCards from "./components/AdminGiftCards";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://api.wah-lah.com";
 const API = `${BACKEND_URL}/api`;
@@ -2304,6 +2305,7 @@ const ManualPaymentModal = ({ user, games, onSave, onClose }) => {
 
 function App() {
   return (
+    <ErrorBoundary>
     <AuthProvider>
       <div className="App">
         <BrowserRouter>
@@ -2329,6 +2331,7 @@ function App() {
         <Toaster position="top-center" richColors />
       </div>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

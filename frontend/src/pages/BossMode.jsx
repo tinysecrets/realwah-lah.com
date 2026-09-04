@@ -8,7 +8,7 @@ import DOMPurify from "dompurify";
 import { useNavigate } from "react-router-dom";
 import { Send, Mic, MicOff, Sparkles, RefreshCw, ArrowLeft, Wand2, Zap, Terminal } from "lucide-react";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://api.wah-lah.com";
 const API = `${BACKEND_URL}/api`;
 
 const QUICK_ASKS = [

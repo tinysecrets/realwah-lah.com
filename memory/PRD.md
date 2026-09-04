@@ -93,7 +93,7 @@ In this preview pod everything runs locally: FastAPI on :8001, React on :3000, M
 - Removed Emergent badge & `assets.emergent.sh/scripts/emergent-main.js` from `frontend/public/index.html` (the user-facing branding); kept dev-only `@emergentbase/visual-edits` package and `emergentintegrations` Stripe library because both are infrastructure, not branding.
 - Sanitized `/api/admin/p2p-transfer` 503 response so Playwright install path no longer leaks.
 - Added `COOKIE_SECURE` + `COOKIE_SAMESITE` env-driven cookie security. Dev = `false` (HTTP local), production must set `COOKIE_SECURE=true` (HTTPS on Fly).
-- Auto-seeded admin user verified: `admin@wah-lah.com` / `WahLah2026!`.
+- Auto-seeded admin user verified with configured credentials.
 - Testing agent (iteration_6): 24/24 backend tests PASS, 0 critical issues.
 
 ## Personas
@@ -144,7 +144,7 @@ sudo supervisorctl restart frontend
 # Admin login
 curl -X POST https://fly-ops.preview.emergentagent.com/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@wah-lah.com","password":"WahLah2026!"}'
+  -d '{"email":"admin@wah-lah.com","password":"YOUR_PASSWORD"}'
 ```
 
 ## Deployment quick-reference (fly.io)

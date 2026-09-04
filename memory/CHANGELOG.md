@@ -144,7 +144,7 @@ Full-session rollup. What changed:
 
 **Brand rebrand**
 - `ADMIN_EMAIL`: `admin@sugarcitysweeps.com` → `admin@wah-lah.com` → **`REDACTED_EMAIL`** (final, user's real email).
-- `ADMIN_PASSWORD`: `SugarCity2024!` → **`SugarCity2026$`** (final).
+- `ADMIN_PASSWORD`: rotated to new value (see deployment secrets).
 - Admin seed now normalizes email to lowercase + case-insensitive auto-purge of stale admins.
 - Support email: `support@wah-lah.com` everywhere.
 - `FRONTEND_URL` → `https://wah-lah.com`. CORS tightened from `*` → explicit list.

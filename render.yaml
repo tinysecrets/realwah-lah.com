@@ -15,7 +15,7 @@ services:
       - key: DB_NAME
         value: wahlah_prod
       - key: JWT_SECRET
-        generateValue: true
+        sync: false
       - key: CORS_ORIGINS
         sync: false
       - key: FRONTEND_URL
@@ -52,4 +52,64 @@ services:
         sync: false
       - key: BTC_PAYOUT_FEE_SAT_PER_BYTE
         value: "3"
+      # Stripe (required for payments)
+      - key: STRIPE_API_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      # LLM (Boss Genie)
+      - key: CEREBRAS_API_KEY
+        sync: false
+      - key: CEREBRAS_MODEL
+        value: qwen-3-235b-a22b-instruct-2507
+      # Error tracking
+      - key: SENTRY_DSN
+        sync: false
+      # Persona KYC
+      - key: PERSONA_API_KEY
+        sync: false
+      - key: PERSONA_TEMPLATE_ID_BASIC
+        sync: false
+      - key: PERSONA_TEMPLATE_ID_ENHANCED
+        sync: false
+      - key: PERSONA_WEBHOOK_SECRET
+        sync: false
+      - key: PERSONA_ENVIRONMENT
+        value: production
+      # BTC Payout gateway
+      - key: BTCPAY_API_URL
+        sync: false
+      - key: BTCPAY_API_KEY
+        sync: false
+      - key: BTCPAY_STORE_ID
+        sync: false
+      - key: BTCPAY_WEBHOOK_SECRET
+        sync: false
+      - key: BTC_GATEWAY_TYPE
+        value: custody
+      # Compliance
+      - key: BLOCKED_STATES
+        value: "WA,ID,MT,NV,LA,TN,MI,UT,AZ"
+      - key: KYC_BASIC_THRESHOLD_USD
+        value: "500"
+      - key: KYC_ENHANCED_THRESHOLD_USD
+        value: "5000"
+      - key: CTR_THRESHOLD_USD
+        value: "10000"
+      - key: SAR_FREQ_WINDOW_HOURS
+        value: "24"
+      - key: SAR_FREQ_THRESHOLD
+        value: "3"
+      # Host enforcement
+      - key: ENFORCE_CANONICAL_HOST
+        value: "true"
+      - key: CANONICAL_HOST
+        value: wah-lah.com
+      # Revenue
+      - key: CASHTAG_KEEP_RATE
+        value: "0.12"
+      - key: GIFTCARD_FEE_RATE
+        value: "0.05"
+      - key: BTC_FEE_RATE
+        value: "0.10"
 

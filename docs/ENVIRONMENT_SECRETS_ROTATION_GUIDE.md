@@ -99,7 +99,9 @@ email_service.send_welcome_email(email, user_name)
 #### **Admin Account** (lines 1896–1897, 1908–1915)
 ```python
 admin_email = os.environ.get("ADMIN_EMAIL", "admin@wah-lah.com").lower().strip()
-admin_password = os.environ.get("ADMIN_PASSWORD", "SugarCity2024!")
+admin_password = os.environ.get("ADMIN_PASSWORD")
+if not admin_password:
+    raise RuntimeError("ADMIN_PASSWORD env var is not set")
 ```
 - **`ADMIN_EMAIL`** (required): Email for admin login
 - **`ADMIN_PASSWORD`** (required): Admin password (16+ chars recommended)

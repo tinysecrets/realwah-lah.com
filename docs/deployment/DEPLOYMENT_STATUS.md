@@ -90,8 +90,8 @@ See `/app/RENDER_DEPLOYMENT_GUIDE.md` section "Environment Variables" for comple
 - **Backend**: https://wahlah-deploy.preview.emergentagent.com/api
 
 **Test Login**:
-- Email: `admin@sugarcitysweeps.com`
-- Password: `SugarCity2024!`
+- Email: `admin@wah-lah.com`
+- Password: (set via ADMIN_PASSWORD env var)
 
 ---
 
@@ -353,8 +353,8 @@ curl -X POST https://your-backend/api/admin/p2p-transfer-init
 ## ⚡ QUICK REFERENCE
 
 ### Admin Access:
-- **Email**: admin@sugarcitysweeps.com
-- **Password**: SugarCity2024!
+- **Email**: admin@wah-lah.com
+- **Password**: (set via ADMIN_PASSWORD env var — do not hardcode)
 
 ### Sugar Sweeps Master Account:
 - **Email**: REDACTED_EMAIL

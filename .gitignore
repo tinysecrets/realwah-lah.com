@@ -2,8 +2,6 @@
 
 # VCS / IDE
 .git
-.gitignore
-.github
 .vscode
 .idea
 .DS_Store

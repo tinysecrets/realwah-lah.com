@@ -22,15 +22,22 @@ export default {
       init.body = request.body;
     }
 
-    const response = await fetch(targetUrl, init);
+    try {
+      const response = await fetch(targetUrl, init);
 
-    const responseHeaders = new Headers(response.headers);
-    responseHeaders.set("X-Proxy", "wah-lah-api-proxy");
+      const responseHeaders = new Headers(response.headers);
+      responseHeaders.set("X-Proxy", "wah-lah-api-proxy");
 
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: responseHeaders,
-    });
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: responseHeaders,
+      });
+    } catch (err) {
+      return new Response(
+        JSON.stringify({ error: "Backend temporarily unavailable", detail: err.message }),
+        { status: 502, headers: { "Content-Type": "application/json" } }
+      );
+    }
   },
 };

@@ -19,7 +19,7 @@ import {
   Clock
 } from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = `${process.env.REACT_APP_BACKEND_URL || "https://api.wah-lah.com"}/api`;
 
 /**
  * MASTER CONTROL PANEL
