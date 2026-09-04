@@ -131,7 +131,10 @@ class HttpHubBridge:
 
         token_field = self.api_fields.get("token")
         token_keys = [token_field] if token_field else [
-            "token", "accessToken", "access_token", "jwt", "Token", "AccessToken",
+            # `idToken` is the confirmed top-level key in the sugar_sweeps login
+            # response (see HUB_CONFIGS). It MUST be searched before/alongside
+            # accessToken, which is a different token in that payload.
+            "idToken", "token", "accessToken", "access_token", "jwt", "Token", "AccessToken",
         ]
         self.token = _dig(data, token_keys)
 

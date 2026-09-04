@@ -1,13 +1,14 @@
-export default {
-  async fetch(request) {
-    const url = new URL(request.url);
+const DEFAULT_TARGET = "https://realwah-lah-com-8v2l.onrender.com";
 
-    const targetUrl =
-      `https://realwah-lah-com.onrender.com${url.pathname}${url.search}`;
+export default {
+  async fetch(request, env) {
+    const targetHost = (env && env.PROD_TARGET) || DEFAULT_TARGET;
+
+    const url = new URL(request.url);
+    const targetUrl = `${targetHost}${url.pathname}${url.search}`;
 
     const headers = new Headers(request.headers);
-
-    headers.set("Host", "realwah-lah-com.onrender.com");
+    headers.set("Host", targetHost.replace(/^https?:\/\//, ""));
     headers.set("X-Forwarded-Host", url.hostname);
     headers.set("X-Forwarded-Proto", "https");
 

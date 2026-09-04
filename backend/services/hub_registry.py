@@ -28,23 +28,48 @@ HUB_CONFIGS: Dict[str, dict] = {
     "sugar_sweeps": {
         "label": "Sugar Sweeps",
         "base_url": "https://sugarsweeps.com",
-        # HTTP fast-path: bypass Vercel WAF by talking to the .NET backend
-        # directly. Discovered 2026-04-27 via console-log network capture —
-        # api.sugarsweeps.com is Cloudflare-fronted but does NOT issue a bot
-        # challenge (CORS preflight returns 204 with full headers, login POST
-        # returns 401 on bad creds / 200 on success). When ``api_base_url`` is
-        # present the bridge factory routes to ``HttpHubBridge`` instead of
-        # spinning up Playwright.
-        "api_base_url": "https://api.sugarsweeps.com",
+        # API base URL — Vercel proxy path (confirmed 2026-09-04).
+        # The browser's API calls go through sugarsweeps.com/api/proxy/...
+        # which forwards to edge.sugarsweeps.com via a Cloudflare Worker.
+        # Response headers: x-matched-path=/api/proxy/[...path],
+        # x-worker-target-host=edge.sugarsweeps.com.
+        "api_base_url": "https://sugarsweeps.com/api/proxy",
         "api_paths": {
             "login": "/api/Auth/login",
-            # transfer/balance paths still TBD — set after first live login
-            # capture exposes the actual endpoints used by sugarsweeps.com.
+            # ------------------------------------------------------------------
+            # TBD — live-verification required. These are the ONLY remaining
+            # values that keep P2P funding from going live. Fill them from your
+            # OWN logged-in browser session (DevTools -> Network -> Fetch/XHR):
+            #
+            #   1. Transfer: do one small P2P transfer, click the request, copy
+            #      the Method + URL path (e.g. /api/Transfer/p2p) into
+            #      "transfer" and the Request-Payload field names into
+            #      api_fields.recipient / .amount / .platform.
+            #   2. Register (if the dashboard creates players): same capture,
+            #      path -> "register", body field names -> api_fields.username
+            #      / .password.
+            #   3. Token key: the login request's Response JSON top-level key
+            #      (e.g. accessToken) -> api_fields.token.
+            #
+            # Paste only the path/field-name strings — never credentials.
+            # Once set, HttpHubBridge.transfer() and the HubRegisterAdapter
+            # (routes/platform_adapters.py) go live, pulling the distributor
+            # proxy credentials from the encrypted vault at runtime.
+            # ------------------------------------------------------------------
+            # Transfer endpoint — confirmed 2026-09-04 via live DevTools capture.
+            # Full URL: sugarsweeps.com/api/proxy/api/P2PTransfers/create-p2p-transfer
+            # Auth: Authorization: Bearer {idToken} (NOT accessToken!)
+            # Body: JSON — field names TBD (waiting for payload capture).
+            "transfer": "/api/P2PTransfers/create-p2p-transfer",
+            # "register": "/api/Auth/register",
         },
         "api_fields": {
             "username": "email",
             "password": "password",
-            # "token": "accessToken",  # uncomment+adjust once live login response is captured
+            # "token": "accessToken",        # top-level key in the login response
+            # "recipient": "username",       # field name carrying the player's game_username
+            # "amount": "amount",
+            # "platform": "platform",        # omit if the transfer body has no per-game field
         },
         "login_path": "/",
         "dashboard_path": "/user/dashboard",

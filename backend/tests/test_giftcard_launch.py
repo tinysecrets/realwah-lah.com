@@ -31,7 +31,7 @@ API = f"{BASE_URL}/api"
 EXT_API = f"{API}/ext"
 
 ADMIN_EMAIL = os.getenv("TEST_ADMIN_EMAIL", "admin@wah-lah.com")
-ADMIN_PASSWORD = os.getenv("TEST_ADMIN_PASSWORD", "SugarCity2024!")
+ADMIN_PASSWORD = os.getenv("TEST_ADMIN_PASSWORD", "")
 
 # --- Helpers --------------------------------------------------------------
 

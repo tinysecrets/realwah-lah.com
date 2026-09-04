@@ -18,7 +18,7 @@ API = f"{BASE_URL}/api"
 POOL = f"{API}/ext/pool/admin"
 
 ADMIN_EMAIL = os.getenv("TEST_ADMIN_EMAIL", "admin@wah-lah.com")
-ADMIN_PASSWORD = os.getenv("TEST_ADMIN_PASSWORD", "SugarCity2024!")
+ADMIN_PASSWORD = os.getenv("TEST_ADMIN_PASSWORD", "")
 
 
 def _login(email: str, password: str) -> requests.Session:
@@ -305,7 +305,7 @@ class TestRedemptionGate:
     def _ensure_btc_on(self):
         """BTC is off by default (master switch). Enable for this test, restore after."""
         a = requests.Session()
-        a.post(f"{API}/auth/login", json={"email": "admin@wah-lah.com", "password": "SugarCity2024!"})
+        a.post(f"{API}/auth/login", json={"email": "admin@wah-lah.com", "password": ADMIN_PASSWORD})
         prior = a.get(f"{API}/ext/compliance/admin/feature-flags").json().get("btc_payouts_enabled", False)
         a.patch(f"{API}/ext/compliance/admin/feature-flags", json={"key": "btc_payouts_enabled", "value": True})
         time.sleep(11)

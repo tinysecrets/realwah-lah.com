@@ -16,7 +16,7 @@ API = f"{BASE_URL}/api"
 COMP = f"{API}/ext/compliance"
 
 ADMIN_EMAIL = os.getenv("TEST_ADMIN_EMAIL", "admin@wah-lah.com")
-ADMIN_PASSWORD = os.getenv("TEST_ADMIN_PASSWORD", "SugarCity2024!")
+ADMIN_PASSWORD = os.getenv("TEST_ADMIN_PASSWORD", "")
 
 # Sanctioned BTC address from the bundled fallback list in ofac.py.
 SANCTIONED_ADDR = "1AQvR6HvLV2jCBboQkn97QnkuKtHyCEWFK"

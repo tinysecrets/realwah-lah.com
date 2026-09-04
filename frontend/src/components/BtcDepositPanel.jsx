@@ -20,6 +20,7 @@ const btcAmount = (sats) => (sats / 1e8).toFixed(8);
 const BtcDepositPanel = ({ deposit, onCompleted, onCancel }) => {
   const [status, setStatus] = useState(deposit?.status || "pending");
   const [confirmations, setConfirmations] = useState(0);
+  const [poolTransferStatus, setPoolTransferStatus] = useState(null);
   const [copied, setCopied] = useState(false);
   const [expired, setExpired] = useState(false);
   const timerRef = useRef(null);
@@ -34,6 +35,7 @@ const BtcDepositPanel = ({ deposit, onCompleted, onCancel }) => {
         if (stop) return;
         setStatus(data.status);
         setConfirmations(data.confirmations || 0);
+        setPoolTransferStatus(data.pool_transfer_status || null);
         if (data.status === "completed") {
           if (timerRef.current) clearInterval(timerRef.current);
           toast.success("Bitcoin deposit confirmed! Credits added.");
@@ -119,6 +121,12 @@ const BtcDepositPanel = ({ deposit, onCompleted, onCancel }) => {
             {deposit.confirmation_required > 1 ? "s" : ""}). Please send the exact amount.
           </p>
 
+          {deposit?.game_id && (
+            <p className="note" style={{ marginTop: "8px" }}>
+              These credits will be funded into your <strong>{deposit.game_id}</strong> gameplay account.
+            </p>
+          )}
+
           <div className="status-line">
             <RefreshCw size={14} className="status-spin" />
             <span>Waiting for payment... {confirmations > 0 ? `${confirmations} confirmations` : ""}</span>
@@ -128,6 +136,17 @@ const BtcDepositPanel = ({ deposit, onCompleted, onCancel }) => {
 
       {confirmed && (
         <p className="note" style={{ fontWeight: 600 }}>Your Sweepstakes package has been funded. Enjoy!</p>
+      )}
+
+      {confirmed && poolTransferStatus === "in_progress" && (
+        <p className="note" style={{ marginTop: "8px", color: "var(--neon-cyan)" }}>
+          Funding your {deposit?.game_id} account... this takes a minute.
+        </p>
+      )}
+      {confirmed && poolTransferStatus === "failed" && (
+        <p className="note" style={{ marginTop: "8px", color: "var(--neon-pink)" }}>
+          ⚠️ Your credits are safe on your balance, but we couldn't fund {deposit?.game_id}. Contact support to complete it.
+        </p>
       )}
     </div>
   );

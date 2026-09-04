@@ -29,7 +29,7 @@ EXT_API = f"{API}/ext"
 
 # Test credentials
 ADMIN_EMAIL = os.getenv("TEST_ADMIN_EMAIL", "admin@wah-lah.com")
-ADMIN_PASSWORD = os.getenv("TEST_ADMIN_PASSWORD", "SugarCity2024!")
+ADMIN_PASSWORD = os.getenv("TEST_ADMIN_PASSWORD", "")
 
 # Test user for per-user tests
 TEST_USER_EMAIL = f"testuser_{int(time.time())}@test.com"

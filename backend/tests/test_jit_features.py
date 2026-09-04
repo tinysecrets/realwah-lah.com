@@ -22,7 +22,7 @@ PLATFORM_API = f"{EXT_API}/platform"
 
 # Test credentials
 ADMIN_EMAIL = os.getenv("TEST_ADMIN_EMAIL", "admin@wah-lah.com")
-ADMIN_PASSWORD = os.getenv("TEST_ADMIN_PASSWORD", "SugarCity2024!")
+ADMIN_PASSWORD = os.getenv("TEST_ADMIN_PASSWORD", "")
 
 # Existing test user
 JIT_USER_EMAIL = "jit_user1@example.com"

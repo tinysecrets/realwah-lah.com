@@ -2,7 +2,7 @@
   "name": "wah-lah",
   "version": "1.0.0",
   "private": true,
-  "description": "WAH-LAH monorepo — FastAPI backend (Fly.io) + React frontend (Cloudflare Pages) + MongoDB Atlas",
+  "description": "WAH-LAH monorepo — FastAPI backend (Render.com) + React frontend (Cloudflare Pages) + MongoDB Atlas",
   "workspaces": [
     "frontend"
   ],

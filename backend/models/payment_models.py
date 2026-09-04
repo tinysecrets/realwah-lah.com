@@ -11,6 +11,17 @@ class CheckoutCreateRequest(BaseModel):
         default="bitcoin",
         description="Payment method — only 'bitcoin' is supported.",
     )
+    platform: Optional[str] = Field(
+        default=None,
+        description="Target game platform id the deposit Game Credits will fund (e.g. 'fire_kirin').",
+    )
+    # The frontend sends the chosen game as ``game_id`` (the games collection _id
+    # or its platform_id alias). Accepted so the existing UI needs no change; it
+    # is folded into ``platform`` on the deposit.
+    game_id: Optional[str] = Field(
+        default=None,
+        description="Alias for platform: the chosen game id from the frontend game picker.",
+    )
 
 
 class RedemptionRequestPayload(BaseModel):

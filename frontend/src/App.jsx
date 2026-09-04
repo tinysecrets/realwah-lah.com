@@ -463,17 +463,15 @@ const Dashboard = () => {
             title="Tap to learn how Tokens and Credits work"
           >
             <span className="bp-seg bp-tokens">
-              <span className="bp-icon">🎩</span>
               <span className="bp-amount">{user?.sugar_tokens?.toLocaleString() || "0"}</span>
               <span className="bp-label">Tokens</span>
             </span>
             <span className="bp-divider" />
             <span className="bp-seg bp-credits">
-              <span className="bp-icon">🎮</span>
               <span className="bp-amount">{user?.game_credits?.toLocaleString() || "0"}</span>
               <span className="bp-label">Credits</span>
             </span>
-            <span className="bp-info">ⓘ</span>
+            <span className="bp-info" aria-hidden="true">ⓘ</span>
           </button>
           
           <div className="user-menu">
@@ -522,14 +520,14 @@ const Dashboard = () => {
               data-testid="balance-info-close"
             >×</button>
             <div className="bip-row">
-              <div className="bip-tag tokens">🎩 Tokens</div>
+              <div className="bip-tag tokens">Tokens</div>
               <div className="bip-text">
                 <strong>What you buy.</strong> $1 = 100 Tokens. Used to play games.
                 Tokens are the "paid product" — they CANNOT be cashed out.
               </div>
             </div>
             <div className="bip-row">
-              <div className="bip-tag credits">🎮 Game Credits</div>
+              <div className="bip-tag credits">Game Credits</div>
               <div className="bip-text">
                 <strong>What you redeem.</strong> You receive Credits free as a 100% bonus
                 on every Token purchase AND as a free-daily reward (100 credits / 24h).
@@ -538,7 +536,7 @@ const Dashboard = () => {
               </div>
             </div>
             <div className="bip-row">
-              <div className="bip-tag amoe">🎁 Free daily (AMOE)</div>
+              <div className="bip-tag amoe">Free daily (AMOE)</div>
               <div className="bip-text">
                 No purchase necessary. Claim 100 free Credits every 24 hours from the dashboard.
               </div>
@@ -980,7 +978,7 @@ const DepositTab = ({ games, onSuccess }) => {
       <div className="section-header">
         <h2>Deposit Funds</h2>
         <p className="sweeps-notice">
-          🎩 Purchase <strong>Sweepstakes credit packages</strong> + get <strong>100% Bonus Game Credits</strong> free! • Popular packages: $10, $25, $50, $100
+          Purchase <strong>Sweepstakes credit packages</strong> + get <strong>100% Bonus Game Credits</strong> free! • Popular packages: $10, $25, $50, $100
         </p>
       </div>
 
@@ -1091,7 +1089,7 @@ const RedeemTab = ({ games }) => {
           btc_address: btcAddress,
           game_id: selectedGame,
         });
-        toast.success("✨ Bitcoin redemption requested! Held for admin approval.");
+        toast.success("Bitcoin redemption requested! Held for admin approval.");
         setSuccessInfo({ type: "btc", amount: parseFloat(amount) });
       } else {
         // Real gift card request — hits the admin queue, debits credits atomically.
@@ -1106,7 +1104,7 @@ const RedeemTab = ({ games }) => {
           recipient_email: email,
           game_id: selectedGame,
         });
-        toast.success(`✨ ${giftCardBrand.toUpperCase()} gift card reserved! Code will hit ${email} within 24h.`);
+        toast.success(`${giftCardBrand.toUpperCase()} gift card reserved! Code will hit ${email} within 24h.`);
         setSuccessInfo({ type: "giftcard", brand: giftCardBrand, amount: parseInt(amount, 10), email });
       }
       setAmount("");
@@ -1277,7 +1275,7 @@ const RedeemTab = ({ games }) => {
                 <Sparkles size={22} />
               </div>
               <div className="rs-text">
-                <strong>Request reserved ✨</strong>
+                <strong>Request reserved</strong>
                 {successInfo.type === "giftcard" ? (
                   <span>${successInfo.amount} {successInfo.brand.toUpperCase()} card queued — code will be emailed to {successInfo.email} within 24h.</span>
                 ) : (
@@ -1394,7 +1392,7 @@ const WithdrawTab = ({ games, user, onSuccess }) => {
   return (
     <div className="tab-content withdraw-tab">
       <div className="section-header">
-        <h2>💰 Cash Out</h2>
+        <h2>Cash Out</h2>
         <p>Withdraw your winnings to Bitcoin</p>
       </div>
 
@@ -1441,8 +1439,8 @@ const WithdrawTab = ({ games, user, onSuccess }) => {
           <div className="withdraw-info">
             <p>Processing Times:</p>
             <ul>
-              <li><span>Under $500:</span> <span style={{color: '#00ff00'}}>Instant ⚡</span></li>
-              <li><span>$500 and above:</span> <span style={{color: '#ffd700'}}>1-24 hours ⏳</span></li>
+              <li><span>Under $500:</span> <span style={{color: '#2FB98A'}}>Instant</span></li>
+              <li><span>$500 and above:</span> <span style={{color: '#E8B854'}}>1-24 hours</span></li>
             </ul>
             <p style={{fontSize: '13px', marginTop: '15px', color: '#aaa'}}>
               Large withdrawals require manual approval for security.

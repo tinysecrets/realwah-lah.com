@@ -1,6 +1,6 @@
 /* SUGAR CITY SWEEPS - PREMIUM DESIGN */
 
-@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;500;700;900&family=Manrope:wght@400;500;600;700&family=Fredoka:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;0,900;1,600&family=Outfit:wght@300;400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap');
 
 * {
   margin: 0;
@@ -6324,4 +6324,360 @@ button[data-testid="login-submit"] {
   padding: 1px 6px;
   border-radius: 4px;
   font-size: 9.5px;
+}
+
+/* =========================================================================
+ * PREMIUM GOLD FINAL OVERRIDE (2026-09-04)
+ * Thorough cleanup of the layered design history. The file accumulated
+ * competing accent schemes (navy/gold from the velvet layer, then magenta
+ * + teal re-introduced in later overrides). This definitive last layer
+ * unifies EVERYTHING on the landing page's own palette:
+ *
+ *   - Pure warm gold / bronze  = brand, money actions, active states
+ *   - Refined emerald          = ONLY semantic "credits / success / ok"
+ *   - NO magenta, NO pink, NO cyan, NO candy neon glows
+ *   - Playfair Display headings + Outfit body (imported at top of file)
+ *   - Emoji balance icons hidden, replaced by refined gold chips
+ *   - Background de-noised (mascot, floating stickers toned way down)
+ *
+ * Pure additive CSS. No JSX logic touched.
+ * ========================================================================= */
+
+/* ========= 1. Unified palette — kill every magenta/pink/cyan trace ========= */
+:root {
+  --wl-gold:         #E8B854 !important;
+  --wl-gold-light:   #F4D98C !important;
+  --wl-gold-deep:    #9A6B1A !important;
+  --wl-bronze:       #C89A45 !important;
+
+  /* Accents that used to be magenta / pink / rose → now pure gold */
+  --wl-magenta:      #E8B854 !important;
+  --wl-orange:       #D8992E !important;
+  --wl-rose:         #C0392B !important;   /* only for destructive/logout, muted */
+  --wl-velvet:       #3A2A1A !important;
+  --wl-velvet-deep:  #141024 !important;
+
+  /* Teal/emerald were used for credits + positive states — keep a SINGLE
+     refined emerald ONLY for semantic success/credits, drop the cyan look. */
+  --wl-teal:         #2FB98A !important;
+  --wl-emerald:      #2FB98A !important;
+
+  --wl-line:         rgba(232, 184, 84, 0.22) !important;
+  --wl-line-soft:    rgba(232, 184, 84, 0.10) !important;
+
+  /* Neon glow vars → soft, warm, non-neon */
+  --glow-gold:  rgba(232, 184, 84, 0.28) !important;
+  --glow-cyan:  rgba(232, 184, 84, 0.20) !important;
+  --glow-magenta: rgba(232, 184, 84, 0.20) !important;
+}
+
+/* Primary / money / CTA buttons: pure gold-bronze (never magenta→gold) */
+.pd-btn,
+.pd-deposit,
+.play-deposit-card .pd-deposit,
+.btn-primary,
+.btn-primary.btn-pay,
+.btn-primary.btn-withdraw,
+.amoe-claim-btn,
+.amoe-claim-btn.eligible,
+.auth-card .btn-primary,
+button[data-testid="register-submit"],
+button[data-testid="login-submit"],
+.game-card-btn,
+.game-card .game-card-btn {
+  background: linear-gradient(135deg, #D8992E 0%, #E8B854 45%, #F4D98C 100%) !important;
+  color: #170A00 !important;
+  border: 1px solid rgba(244, 217, 140, 0.9) !important;
+  box-shadow: 0 12px 30px -10px rgba(154, 107, 26, 0.55),
+              inset 0 1px 0 rgba(255, 255, 255, 0.55) !important;
+  text-shadow: none !important;
+}
+.pd-btn:hover,
+.pd-deposit:hover,
+.btn-primary:hover,
+.btn-primary.btn-pay:hover,
+.amoe-claim-btn.eligible:hover,
+.game-card-btn:hover {
+  filter: brightness(1.06) !important;
+  box-shadow: 0 16px 38px -10px rgba(154, 107, 26, 0.7),
+              inset 0 1px 0 rgba(255, 255, 255, 0.65) !important;
+}
+
+/* Secondary / ghost buttons: clean gold-on-velvet outline, no magenta */
+.pd-btn.pd-play,
+.btn-secondary {
+  background: rgba(232, 184, 84, 0.06) !important;
+  color: #E8B854 !important;
+  border: 1px solid rgba(232, 184, 84, 0.32) !important;
+  box-shadow: none !important;
+}
+.pd-btn.pd-play:hover,
+.btn-secondary:hover {
+  background: rgba(232, 184, 84, 0.12) !important;
+  border-color: #E8B854 !important;
+  color: #F4D98C !important;
+}
+
+/* ========= 2. Balance pill — premium cashier chips, no emoji ========= */
+.balance-pill {
+  background: linear-gradient(180deg, rgba(26, 18, 8, 0.92), rgba(10, 6, 3, 0.96)) !important;
+  border: 1px solid rgba(232, 184, 84, 0.25) !important;
+  border-radius: 999px !important;
+  box-shadow: inset 0 1px 0 rgba(244, 217, 140, 0.12), 0 8px 24px -10px rgba(0,0,0,0.6) !important;
+  gap: 2px !important;
+}
+
+/* Hide the emoji glyphs (🎩 🎮 ⓘ) — replaced by refined gold dividers/chips */
+.balance-pill .bp-icon,
+.balance-pill .bp-info {
+  display: none !important;
+}
+
+.balance-pill .bp-seg {
+  background: transparent !important;
+  border: none !important;
+  flex-direction: row !important;
+}
+.balance-pill .bp-tokens,
+.balance-pill .bp-credits {
+  position: relative;
+}
+.balance-pill .bp-amount {
+  font-family: 'Playfair Display', serif !important;
+  font-weight: 700 !important;
+  color: #F4D98C !important;
+  letter-spacing: 0.02em !important;
+}
+.balance-pill .bp-credits .bp-amount {
+  color: #2FB98A !important;
+}
+.balance-pill .bp-label {
+  font-family: 'Outfit', sans-serif !important;
+  color: rgba(201, 212, 234, 0.6) !important;
+  font-weight: 500 !important;
+  font-size: 10px !important;
+  letter-spacing: 0.16em !important;
+  text-transform: uppercase !important;
+}
+.balance-pill .bp-divider {
+  width: 1px !important;
+  height: 20px !important;
+  background: linear-gradient(180deg, transparent, rgba(232,184,84,0.5), transparent) !important;
+  margin: 0 4px !important;
+}
+
+/* ========= 3. Header — clean, grounded, no candy ========= */
+.dashboard-header {
+  background: rgba(7, 11, 24, 0.82) !important;
+  border-bottom: 1px solid rgba(232, 184, 84, 0.16) !important;
+}
+.header-title h1 {
+  font-family: 'Playfair Display', serif !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  background: linear-gradient(180deg, #FFF 0%, #E8B854 90%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+.header-title span {
+  font-family: 'Playfair Display', serif !important;
+  font-style: italic !important;
+  color: rgba(201, 212, 234, 0.55) !important;
+  letter-spacing: 0.22em !important;
+  text-transform: uppercase;
+}
+.header-logo {
+  color: #E8B854 !important;
+  filter: drop-shadow(0 0 8px rgba(232, 184, 84, 0.35)) !important;
+}
+.vip-badge,
+[data-testid="vip-badge"] {
+  background: linear-gradient(135deg, rgba(232,184,84,0.14), rgba(200,154,69,0.06)) !important;
+  border: 1px solid rgba(232, 184, 84, 0.4) !important;
+  color: #E8B854 !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.08em !important;
+}
+
+/* ========= 4. Tab navigation — gold active pill, no magenta ========= */
+.tab-nav {
+  background: rgba(9, 13, 28, 0.6) !important;
+  border-bottom: 1px solid rgba(232, 184, 84, 0.12) !important;
+}
+.tab-btn {
+  color: rgba(201, 212, 234, 0.72) !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 500 !important;
+}
+.tab-btn:hover {
+  background: rgba(232, 184, 84, 0.07) !important;
+  color: #E8B854 !important;
+  border-color: rgba(232, 184, 84, 0.2) !important;
+}
+.tab-btn.active,
+.nav-item.active,
+.nav-item[aria-selected="true"],
+[role="tab"][aria-selected="true"] {
+  background: linear-gradient(180deg, rgba(232,184,84,0.16), rgba(154,107,26,0.06)) !important;
+  border-color: rgba(232, 184, 84, 0.45) !important;
+  color: #F4D98C !important;
+  box-shadow: inset 0 1px 0 rgba(244,217,140,0.18), 0 6px 20px -10px rgba(154,107,26,0.45) !important;
+}
+
+/* ========= 5. Game cards — rich premium tiles ========= */
+.play-deposit-card,
+.game-card,
+.game-card-simple,
+.game-card-premium {
+  background: linear-gradient(180deg, rgba(20, 15, 6, 0.9), rgba(8, 6, 3, 0.96)) !important;
+  border: 1px solid rgba(232, 184, 84, 0.14) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 18px 40px -18px rgba(0,0,0,0.7), inset 0 1px 0 rgba(244,217,140,0.06) !important;
+}
+.play-deposit-card:hover,
+.game-card:hover,
+.game-card-simple:hover,
+.game-card-premium:hover {
+  border-color: rgba(232, 184, 84, 0.4) !important;
+  box-shadow: 0 24px 52px -18px rgba(0,0,0,0.8),
+              0 0 0 1px rgba(232,184,84,0.12),
+              inset 0 1px 0 rgba(244,217,140,0.08) !important;
+}
+.game-card h3,
+.play-deposit-card h3,
+.game-card-premium h3 {
+  font-family: 'Playfair Display', serif !important;
+  color: #F4F7FF !important;
+  font-weight: 700 !important;
+}
+.game-card-image {
+  border-radius: 12px !important;
+  border: 1px solid rgba(232, 184, 84, 0.08) !important;
+}
+/* price tag — gold chip */
+.price-tag {
+  background: linear-gradient(135deg, rgba(154,107,26,0.55), rgba(26,18,8,0.85)) !important;
+  color: #F4D98C !important;
+  border: 1px solid rgba(232, 184, 84, 0.3) !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 600 !important;
+}
+.bonus-badge {
+  background: linear-gradient(135deg, #D8992E, #E8B854) !important;
+  color: #170A00 !important;
+  border: 1px solid rgba(244,217,140,0.9) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 8px 22px -8px rgba(154,107,26,0.6) !important;
+}
+.game-status {
+  color: #2FB98A !important;
+  font-family: 'Outfit', sans-serif !important;
+}
+
+/* ========= 6. Deposit / cashier — trustworthy, calm ========= */
+.deposit-form,
+.amount-input-box,
+.pd-amount-row {
+  background: rgba(10, 7, 3, 0.6) !important;
+  border: 1px solid rgba(232, 184, 84, 0.16) !important;
+  border-radius: 14px !important;
+}
+.amount-input-box input,
+.pd-amount {
+  font-family: 'Playfair Display', serif !important;
+  color: #F4D98C !important;
+}
+.withdraw-info,
+.sweeps-notice,
+.balance-info-panel {
+  background: linear-gradient(135deg, rgba(26,18,8,0.6), rgba(10,7,3,0.9)) !important;
+  border: 1px solid rgba(232, 184, 84, 0.2) !important;
+  color: rgba(201, 212, 234, 0.8) !important;
+}
+.btc-icon,
+.qr-code {
+  border-color: rgba(232, 184, 84, 0.5) !important;
+}
+
+/* ========= 7. Sections / ornament / table chrome ========= */
+.section-header {
+  font-family: 'Playfair Display', serif !important;
+  color: #F4F7FF !important;
+  border-bottom: 1px solid rgba(232, 184, 84, 0.2) !important;
+}
+.section-header::after {
+  background: linear-gradient(90deg, #D8992E, #E8B854, transparent) !important;
+}
+.wl-ornament-bar {
+  background: linear-gradient(90deg, transparent, rgba(232,184,84,0.55) 50%, transparent) !important;
+}
+.data-table th {
+  color: #E8B854 !important;
+  font-family: 'Outfit', sans-serif !important;
+  letter-spacing: 0.18em !important;
+}
+.tx-icon,
+.status-badge {
+  background: linear-gradient(135deg, rgba(232,184,84,0.14), rgba(200,154,69,0.05)) !important;
+  border: 1px solid rgba(232, 184, 84, 0.3) !important;
+  color: #E8B854 !important;
+}
+
+/* ========= 8. Stats — gold numerals ========= */
+.stat-value {
+  font-family: 'Playfair Display', serif !important;
+  background: linear-gradient(180deg, #FFF, #E8B854) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+
+/* ========= 9. De-noise background & floating candy ========= */
+/* Mascot: keep but far more subtle, faded into the dark, non-pink */
+.dashboard-mascot img {
+  opacity: 0.5 !important;
+  filter: grayscale(0.25) brightness(0.9) drop-shadow(0 0 30px rgba(0,0,0,0.7)) !important;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 45%, transparent 100%) !important;
+          mask-image: linear-gradient(180deg, #000 0%, #000 45%, transparent 100%) !important;
+}
+/* Floating character stickers — hide (already hidden in one layer, enforce) */
+.floating-chars,
+.card-genie,
+.header-genie-orbit,
+.dashboard-mascot {
+  pointer-events: none !important;
+}
+
+/* ========= 10. Scrollbar — gold on velvet ========= */
+.dashboard ::-webkit-scrollbar-thumb,
+.admin-dashboard ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #9A6B1A, #3A2A1A) !important;
+}
+
+/* ========= 11. Boss-mode provider badge — keep functional, neutralize magenta ========= */
+.boss-brain-venice {
+  border-color: rgba(232, 184, 84, 0.5) !important;
+  background: linear-gradient(135deg, rgba(232,184,84,0.14), rgba(10,5,5,0.6)) !important;
+  box-shadow: 0 0 18px rgba(232,184,84,0.2) !important;
+}
+.boss-brain-venice .boss-brain-dot {
+  background: #E8B854 !important;
+  box-shadow: 0 0 10px #E8B854 !important;
+}
+.boss-switcher-opt.is-active {
+  background: rgba(232,184,84,0.14) !important;
+  border-color: rgba(232,184,84,0.42) !important;
+}
+
+/* ========= 12. Money-positive feedback — emerald only ========= */
+.credits-amount,
+.bp-credits .bp-amount,
+.balance-amount.game-credits {
+  color: #2FB98A !important;
+}
+.success,
+[class*="success"] {
+  color: #2FB98A !important;
 }

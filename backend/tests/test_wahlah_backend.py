@@ -17,7 +17,7 @@ BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://fly-ops.preview.emer
 API = f"{BASE_URL}/api"
 
 ADMIN_EMAIL = "admin@wah-lah.com"
-ADMIN_PASSWORD = "WahLah2026!"
+ADMIN_PASSWORD = os.getenv("TEST_ADMIN_PASSWORD", "")
 
 
 # ---------- shared fixtures ----------

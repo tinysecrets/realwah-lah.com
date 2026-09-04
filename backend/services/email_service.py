@@ -46,7 +46,7 @@ class EmailService:
 
     def send_welcome_email(self, to_email: str, name: str) -> tuple[bool, str]:
         safe_name = html.escape(name)
-        frontend = os.environ.get("FRONTEND_URL", "https://realwah-lah.com").rstrip("/")
+        frontend = os.environ.get("FRONTEND_URL", "https://wah-lah.com").rstrip("/")
         body = f"<html><body><h1>WAH-LAH</h1><h2>Welcome, {safe_name}!</h2><p><a href=\"{html.escape(frontend)}\">Start Playing</a></p></body></html>"
         return self.send_email(to_email, "Welcome to WAH-LAH", body, f"Welcome to WAH-LAH, {name}! {frontend}")
 
@@ -59,7 +59,7 @@ class EmailService:
         return self.send_email(to_email, f"Withdrawal {status.title()} - WAH-LAH", body)
 
     def send_welcome_rich(self, to_email: str, name: str) -> tuple[bool, str]:
-        frontend = os.environ.get("FRONTEND_URL", "https://realwah-lah.com").rstrip("/")
+        frontend = os.environ.get("FRONTEND_URL", "https://wah-lah.com").rstrip("/")
         safe_name = html.escape(name)
         safe_frontend = html.escape(frontend, quote=True)
         body = f"<html><body style=\"background:#1e0a23;color:#e9dfc2;padding:30px\"><h1>WAH-LAH <span style=\"color:#d4af37\">THE MAGIC REVEAL</span></h1><p>Welcome, {safe_name}! Your WAH-LAH account is ready.</p><p><a href=\"{safe_frontend}\">Begin the Reveal →</a></p><p>This message was sent from {html.escape(self.from_email)}</p></body></html>"
@@ -67,7 +67,7 @@ class EmailService:
 
     def send_password_reset_email(self, to_email: str, name: str, token: str) -> tuple[bool, str]:
         """Send the one-time reset link. The token is never logged or returned."""
-        frontend = os.environ.get("FRONTEND_URL", "https://realwah-lah.com").rstrip("/")
+        frontend = os.environ.get("FRONTEND_URL", "https://wah-lah.com").rstrip("/")
         reset_path = os.environ.get("PASSWORD_RESET_PATH", "/reset-password")
         reset_link = f"{frontend}{reset_path}?token={token}"
         safe_name = html.escape(name)

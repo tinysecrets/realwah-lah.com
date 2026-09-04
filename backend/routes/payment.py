@@ -199,6 +199,10 @@ def build_payment_router(db, get_current_user, get_admin_user) -> APIRouter:
 
         btc_satoshis = btc_processor.usd_to_satoshis(amount, btc_usd_rate)
 
+        # Resolve the funded game: the transfer dispatcher reads deposit.platform.
+        # Prefer explicit platform, else the frontend's chosen game id.
+        target_platform = payload.platform or payload.game_id
+
         # Persist a pending deposit + pending purchase (no credits yet).
         success, msg, deposit_id = await currency_service.create_pending_btc_purchase(
             user_id=user_id,
@@ -207,6 +211,7 @@ def build_payment_router(db, get_current_user, get_admin_user) -> APIRouter:
             btc_address=btc_address,
             btc_satoshis=btc_satoshis,
             btc_usd_rate=btc_usd_rate,
+            platform=target_platform,
         )
         if not success or not deposit_id:
             raise HTTPException(status_code=500, detail=msg)
@@ -250,6 +255,9 @@ def build_payment_router(db, get_current_user, get_admin_user) -> APIRouter:
             "amount_usd": deposit.get("amount_usd"),
             "btc_address": deposit.get("btc_address"),
             "btc_satoshis": deposit.get("btc_satoshis"),
+            "platform": deposit.get("platform"),
+            "pool_transfer_status": deposit.get("pool_transfer_status"),
+            "pool_transfer_message": deposit.get("pool_transfer_message"),
         }
 
     # ------------------------------------------------------------------

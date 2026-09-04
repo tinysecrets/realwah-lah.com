@@ -97,6 +97,15 @@ async def lifespan(app):
     except Exception:
         logger.exception("Game seed on startup failed (non-fatal).")
 
+    # Bind real platform-registration adapters (replaces the dry-run stub for
+    # the hub's supported platforms). Non-fatal: until api_paths.register is
+    # captured in hub_registry.py the adapter degrades to dry-run behavior.
+    try:
+        from routes.platform_adapters import bind_hub_register_adapters
+        bind_hub_register_adapters()
+    except Exception:
+        logger.exception("Binding platform register adapters failed (non-fatal).")
+
     yield
 
 

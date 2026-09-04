@@ -5,3 +5,6 @@ compatibility_date = "2026-08-16"
 [[routes]]
 pattern = "api.wah-lah.com/*"
 custom_domain = false
+
+[vars]
+PROD_TARGET = "https://realwah-lah-com-8v2l.onrender.com"

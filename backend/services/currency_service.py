@@ -31,6 +31,11 @@ from models.currency_models import (
 
 logger = logging.getLogger(__name__)
 
+# Strong references to background distributor-transfer tasks. Without holding a
+# reference, CPython can garbage-collect an in-flight asyncio task and silently
+# truncate the transfer, leaving the deposit stuck in "in_progress" forever.
+_TRANSFER_TASKS: set = set()
+
 class CurrencyService:
     """Manages dual-currency system for legal sweepstakes compliance"""
     
@@ -199,6 +204,7 @@ class CurrencyService:
         payment_reference: Optional[str] = None,
         expires_at: Optional[str] = None,
         deposit_index: Optional[int] = None,
+        platform: Optional[str] = None,
     ) -> Tuple[bool, str, Optional[str]]:
         """
         Create a PENDING Sugar Token purchase held until the BTC deposit is
@@ -226,6 +232,7 @@ class CurrencyService:
                 "btc_usd_rate": btc_usd_rate,
                 "payment_reference": payment_reference,
                 "deposit_index": deposit_index,
+                "platform": platform,
                 "status": "pending",
                 "confirmations": 0,
                 "tx_hash": None,
@@ -311,24 +318,124 @@ class CurrencyService:
                 metadata={"btc_deposit_id": deposit_id, "tx_hash": tx_hash},
             )
 
-            # Mark the deposit completed.
+            # Mark the deposit completed, atomically guarding against duplicate
+            # transfer dispatch (webhook retries must never send credits twice).
+            deposit_set = {
+                "status": "completed",
+                "tx_hash": tx_hash,
+                "confirmations": max(confirmations, 1),
+                "payment_reference": payment_reference or tx_hash,
+                "completed_at": now.isoformat(),
+                "pool_transfer_status": "pending",
+            }
             await self.db.btc_deposits.update_one(
-                {"id": deposit_id},
-                {"$set": {
-                    "status": "completed",
-                    "tx_hash": tx_hash,
-                    "confirmations": max(confirmations, 1),
-                    "payment_reference": payment_reference or tx_hash,
-                    "completed_at": now.isoformat(),
-                }},
+                {"id": deposit_id, "status": {"$ne": "completed"}},
+                {"$set": deposit_set},
             )
 
             logger.info(f"✅ BTC deposit completed: {user_email} ${amount_usd} tx={tx_hash}")
+
+            # Dispatch the funded Game Credits to the chosen game platform via the
+            # distributor proxy pool. Runs in the background so the webhook returns
+            # fast; idempotency is enforced by pool_transfer_status on the deposit.
+            await self._dispatch_platform_transfer(deposit_id, tx_hash, bonus_credits)
             return True, f"Deposit completed ({amount_usd} USD)"
 
         except Exception as e:
             logger.error(f"Complete BTC purchase error: {str(e)}")
             return False, f"Error: {str(e)}"
+
+    async def _dispatch_platform_transfer(self, deposit_id: str, tx_hash: str, amount: float):
+        """Kick off funding the player's Game Credits to their chosen game.
+
+        Async + idempotent: called from ``complete_btc_purchase`` and safe for
+        webhook retries. Atomic compare-and-set on ``pool_transfer_status``
+        guarantees the transfer is dispatched exactly once even if this runs
+        concurrently. No-op when the deposit has no target ``platform``.
+        """
+        try:
+            deposit = await self.db.btc_deposits.find_one({"id": deposit_id})
+            if not deposit:
+                return
+            platform = deposit.get("platform")
+            if not platform:
+                # No game selected — leave Game Credits on the local balance only.
+                await self.db.btc_deposits.update_one(
+                    {"id": deposit_id},
+                    {"$set": {"pool_transfer_status": "skipped_no_platform"}},
+                )
+                return
+            if deposit.get("pool_transfer_status") in ("in_progress", "done", "failed"):
+                return
+
+            user_id = deposit.get("user_id")
+            user = await self.db.users.find_one({"_id": ObjectId(user_id)}) if user_id else None
+            recipient = (user or {}).get("game_username")
+            if not recipient:
+                await self.db.btc_deposits.update_one(
+                    {"id": deposit_id},
+                    {"$set": {"pool_transfer_status": "failed_no_username"}},
+                )
+                return
+
+            # Atomic claim: only one dispatcher flips pending -> in_progress.
+            claimed = await self.db.btc_deposits.update_one(
+                {"id": deposit_id, "pool_transfer_status": "pending"},
+                {"$set": {
+                    "pool_transfer_status": "in_progress",
+                    "pool_transfer_started_at": datetime.now(timezone.utc).isoformat(),
+                }},
+            )
+            if claimed.modified_count == 0:
+                return
+
+            # Run in the background so the webhook never blocks on a 20-45s
+            # Playwright/HTTP proxy transfer. Errors are recorded on the deposit
+            # for admin retry rather than crashing the request.
+            import asyncio
+
+            task = asyncio.create_task(
+                self._run_platform_transfer(
+                    deposit_id=deposit_id,
+                    user_id=user_id,
+                    recipient=recipient,
+                    platform=platform,
+                    amount=amount,
+                    tx_hash=tx_hash,
+                )
+            )
+            _TRANSFER_TASKS.add(task)
+            task.add_done_callback(_TRANSFER_TASKS.discard)
+        except Exception as e:
+            logger.error(f"Platform transfer dispatch error: {e}")
+
+    async def _run_platform_transfer(
+        self, deposit_id: str, user_id: str, recipient: str, platform: str, amount: float, tx_hash: str
+    ):
+        from routes.distributor_pool import execute_pool_transfer
+
+        ok, msg, detail = await execute_pool_transfer(
+            self.db,
+            recipient_username=recipient,
+            amount=amount,
+            platform=platform,
+            user_id=user_id,
+        )
+        status = "done" if ok else "failed"
+        await self.db.btc_deposits.update_one(
+            {"id": deposit_id},
+            {"$set": {
+                "pool_transfer_status": status,
+                "pool_transfer_message": msg,
+                "pool_transfer_detail": detail,
+                "pool_transfer_tx_hash": tx_hash,
+                "pool_transfer_completed_at": datetime.now(timezone.utc).isoformat(),
+            }},
+        )
+        logger.info(
+            f"[pool:transfer] deposit={deposit_id} platform={platform} "
+            f"recipient={recipient} ok={ok} msg={msg}"
+        )
 
     async def claim_amoe_daily(
         self,

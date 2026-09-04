@@ -70,6 +70,11 @@ def build_game_docs():
     for slug, (name, logo_url, game_url, description, accent_color) in GAMES.items():
         docs.append({
             "slug": slug,
+            # Stable adapter key — the JIT registration framework and distributor
+            # pool both resolve the game to a platform via platform_id (falling
+            # back to the Mongo _id). Binding it to the stable slug decouples the
+            # platform adapter registry from DB ObjectIds that vary per environment.
+            "platform_id": slug,
             "name": name,
             "logo_url": logo_url,
             "game_url": game_url,
