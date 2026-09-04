@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 from pathlib import Path
 import os
 import logging
+from contextlib import asynccontextmanager
 
 # Setup logging before any other imports
 logger = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ from typing import Optional, Dict
 from services.email_service import email_service
 from services.bonus_service import BonusService
 from services.currency_service import CurrencyService
+from game_seed import ensure_games_seeded
 
 # Feature extensions
 from routes.extensions import build_extensions_router
@@ -80,7 +82,25 @@ if not mongoodb_uri:
 client = AsyncIOMotorClient(mongoodb_uri)
 db = client[os.environ.get("DB_NAME", "wahlah_prod")]
 
-app = FastAPI(title="WAH-LAH API", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(app):
+    """Run startup/shutdown tasks for the FastAPI app."""
+    # Auto-seed the games collection (no-op if games already exist). Never
+    # overwrites operator-managed data — only fills an empty collection.
+    try:
+        result = await ensure_games_seeded(db)
+        if result.get("seeded"):
+            logger.info("Seeded %d games into the games collection.", result["count"])
+        else:
+            logger.info("Games collection already seeded (%d games).", result.get("count", 0))
+    except Exception:
+        logger.exception("Game seed on startup failed (non-fatal).")
+
+    yield
+
+
+app = FastAPI(title="WAH-LAH API", version="1.0.0", lifespan=lifespan)
 api_router = APIRouter(prefix="/api")
 
 # CORS Configuration
