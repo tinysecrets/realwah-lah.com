@@ -17,7 +17,7 @@
     "clean": "rm -rf backend/.venv frontend/node_modules .pytest_cache"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "packageManager": "yarn@1.22.22"
 }
