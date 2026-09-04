@@ -21,7 +21,14 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r backend/requirements.txt pytest requests
-      - run: python -m pytest backend/tests/test_hub_http_bridge.py -q
+      - name: Syntax-check entire backend (catches import-time breakage app-wide)
+        run: python -m compileall -q backend
+      - name: Run self-contained backend unit + regression tests
+        run: python -m pytest backend/tests/test_hub_http_bridge.py -q
+        env:
+          SKIP_NET_TESTS: "1"
+      - name: Collect integration tests (skipped without a live backend)
+        run: python -m pytest backend/tests --collect-only -q | tail -1
 
   frontend-build:
     runs-on: ubuntu-latest
@@ -33,7 +40,9 @@ jobs:
           cache: yarn
           cache-dependency-path: frontend/yarn.lock
       - run: yarn --cwd frontend install --frozen-lockfile
+      - run: yarn --cwd frontend test
       - run: yarn --cwd frontend build
         env:
           REACT_APP_BACKEND_URL: https://api.wah-lah.com
+          VITE_POSTHOG_KEY: ${{ secrets.VITE_POSTHOG_KEY }}
           CI: false

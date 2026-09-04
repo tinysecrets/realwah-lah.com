@@ -196,9 +196,9 @@ export const ResetPasswordPage = () => {
         <div style={cardStyle}>
           <form onSubmit={submit}>
             <label style={{ display: "block", fontSize: 13, marginBottom: 6 }}>New password</label>
-            <input data-testid="reset-new-password-input" type="password" value={pw} onChange={(e) => setPw(e.target.value)} required minLength={6} style={inputStyle} />
+            <input data-testid="reset-new-password-input" type="password" value={pw} onChange={(e) => setPw(e.target.value)} required minLength={8} style={inputStyle} />
             <label style={{ display: "block", fontSize: 13, margin: "14px 0 6px" }}>Confirm password</label>
-            <input data-testid="reset-confirm-password-input" type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} required minLength={6} style={inputStyle} />
+            <input data-testid="reset-confirm-password-input" type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} required minLength={8} style={inputStyle} />
             <button data-testid="reset-submit-btn" disabled={loading} style={{ ...primaryBtn, marginTop: 18 }}>{loading ? "Resetting…" : "Reset password"}</button>
           </form>
         </div>
@@ -307,7 +307,7 @@ const SecurityPanel = () => {
           <label style={{ fontSize: 13 }}>Current password</label>
           <input data-testid="sec-current-pw" type="password" value={cur} onChange={(e) => setCur(e.target.value)} required style={inputStyle} />
           <label style={{ fontSize: 13, marginTop: 12, display: "block" }}>New password</label>
-          <input data-testid="sec-new-pw" type="password" value={nw} onChange={(e) => setNw(e.target.value)} required minLength={6} style={inputStyle} />
+          <input data-testid="sec-new-pw" type="password" value={nw} onChange={(e) => setNw(e.target.value)} required minLength={8} style={inputStyle} />
           <button data-testid="sec-change-pw-btn" type="submit" style={{ ...primaryBtn, marginTop: 14 }}>Update password</button>
         </form>
       </div>

@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "description": "WAH-LAH monorepo — FastAPI backend (Render.com) + React frontend (Cloudflare Pages) + MongoDB Atlas",
-  "workspaces": [
-    "frontend"
-  ],
   "scripts": {
     "backend:install": "pip install -r backend/requirements.txt",
     "backend:run": "cd backend && PYTHONPATH=. uvicorn server:app --reload --host 0.0.0.0 --port 8001",

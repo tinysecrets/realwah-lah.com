@@ -31,6 +31,7 @@ jobs:
         run: yarn install --frozen-lockfile && yarn build
         env:
           REACT_APP_BACKEND_URL: https://api.wah-lah.com
+          VITE_POSTHOG_KEY: ${{ secrets.VITE_POSTHOG_KEY }}
           CI: false
 
       # Keep the deployment workflow active for the current main revision.

@@ -97,7 +97,9 @@
               }),
               (e.__SV = 1));
       })(document, window.posthog || []);
-      posthog.init("phc_xAvL2Iq4tFmANRE7kzbKwaSqp1HJjN7x48s3vr0CMjs", {
+      var phKey = "%VITE_POSTHOG_KEY%";
+      if (phKey.indexOf("VITE_POSTHOG_KEY") !== -1) phKey = "phc_xAvL2Iq4tFmANRE7kzbKwaSqp1HJjN7x48s3vr0CMjs";
+      posthog.init(phKey, {
           api_host: "https://us.i.posthog.com",
           person_profiles: "identified_only",
           session_recording: {

@@ -38,6 +38,15 @@ from datetime import datetime, timezone, timedelta
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, Dict
 
+try:
+    from slowapi import Limiter
+    from slowapi.errors import RateLimitExceeded
+    from slowapi.util import get_remote_address
+    from slowapi.middleware import SlowAPIMiddleware
+    SLOWAPI_AVAILABLE = True
+except ImportError:
+    SLOWAPI_AVAILABLE = False
+
 # Services
 from services.email_service import email_service
 from services.bonus_service import BonusService
@@ -111,6 +120,35 @@ async def lifespan(app):
 
 app = FastAPI(title="WAH-LAH API", version="1.0.0", lifespan=lifespan)
 api_router = APIRouter(prefix="/api")
+
+# Rate limiting: key on the first public-facing IP. Behind the Cloudflare
+# API proxy we trust CF-Connecting-IP; fall back to the peer address.
+if SLOWAPI_AVAILABLE:
+    def _rate_key(request: Request) -> str:
+        cf = request.headers.get("CF-Connecting-IP")
+        if cf:
+            return cf.strip()
+        fwd = request.headers.get("X-Forwarded-For", "")
+        if fwd:
+            return fwd.split(",")[0].strip()
+        return get_remote_address(request)
+
+    limiter = Limiter(
+        key_func=_rate_key,
+        default_limits=[os.environ.get("RATE_LIMIT_DEFAULT", "120/minute")],
+        headers_enabled=True,
+    )
+    app.state.limiter = limiter
+
+    def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Response:
+        return Response(
+            content='{"detail":"Rate limit exceeded. Try again later."}',
+            status_code=429,
+            media_type="application/json",
+            headers={"Retry-After": str(getattr(exc, "retry_after", 60))},
+        )
+
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 
 # CORS Configuration
 cors_origins = [
@@ -223,7 +261,7 @@ async def get_admin_user(request: Request) -> dict:
 # Pydantic Models
 class UserRegister(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8, description="Password must be at least 8 characters")
     name: Optional[str] = None
     age_verified: bool = Field(
         default=False,
@@ -405,7 +443,8 @@ api_router.include_router(
 
 
 @api_router.post("/auth/register")
-async def register(data: UserRegister, response: Response):
+@limiter.limit(os.environ.get("RATE_LIMIT_REGISTER", "10/minute")) if SLOWAPI_AVAILABLE else (lambda f: f)
+async def register(data: UserRegister, response: Response, request: Request):
     email = data.email.lower()
     existing = await db.users.find_one({"email": email})
     if existing:
@@ -495,6 +534,7 @@ async def register(data: UserRegister, response: Response):
     }
 
 @api_router.post("/auth/login")
+@limiter.limit(os.environ.get("RATE_LIMIT_LOGIN", "20/minute")) if SLOWAPI_AVAILABLE else (lambda f: f)
 async def login(data: UserLogin, response: Response, request: Request):
     email = data.email.lower()
     identifier = f"{request.client.host}:{email}"

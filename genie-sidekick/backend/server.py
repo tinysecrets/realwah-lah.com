@@ -27,6 +27,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from openai import AsyncOpenAI
 from jose import JWTError, jwt
 from dotenv import load_dotenv
+import bcrypt
 
 load_dotenv()
 
@@ -40,6 +41,7 @@ JWT_TTL_HOURS = 12
 
 ADMIN_EMAIL = (os.environ.get("GENIE_ADMIN_EMAIL") or os.environ.get("ADMIN_EMAIL") or "").strip()
 ADMIN_PASSWORD = os.environ.get("GENIE_ADMIN_PASSWORD") or os.environ.get("ADMIN_PASSWORD") or ""
+ADMIN_PASSWORD_HASH = os.environ.get("GENIE_ADMIN_PASSWORD_HASH") or os.environ.get("ADMIN_PASSWORD_HASH") or ""
 
 MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
 DB_NAME = os.environ.get("DB_NAME", "genie_sidekick")
@@ -207,9 +209,33 @@ auth_router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 @auth_router.post("/login")
 async def login(req: LoginRequest):
-    if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+    if not ADMIN_EMAIL:
         raise HTTPException(500, "Admin not configured on server")
-    if req.email.strip().lower() != ADMIN_EMAIL.lower() or req.password != ADMIN_PASSWORD:
+    # Prefer a pre-hashed secret; otherwise hash the plaintext once at login
+    # instead of comparing it in cleartext.
+    if ADMIN_PASSWORD_HASH:
+        stored = ADMIN_PASSWORD_HASH
+        has_admin_pwd = True
+    elif ADMIN_PASSWORD and ADMIN_PASSWORD.startswith("$2"):
+        stored = ADMIN_PASSWORD
+        has_admin_pwd = True
+    elif ADMIN_PASSWORD:
+        try:
+            stored = bcrypt.hashpw(ADMIN_PASSWORD.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+            has_admin_pwd = True
+        except Exception:
+            has_admin_pwd = False
+    else:
+        has_admin_pwd = False
+    if not has_admin_pwd:
+        raise HTTPException(500, "Admin not configured on server")
+    try:
+        ok = req.email.strip().lower() == ADMIN_EMAIL.lower() and bcrypt.checkpw(
+            req.password.encode("utf-8"), stored.encode("utf-8")
+        )
+    except Exception:
+        ok = False
+    if not ok:
         raise HTTPException(401, "Bad credentials")
     return {"access_token": make_token(ADMIN_EMAIL), "email": ADMIN_EMAIL}
 

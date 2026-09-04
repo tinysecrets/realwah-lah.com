@@ -1,22 +1,28 @@
-import { useState, useEffect, useCallback, createContext, useContext } from "react";
+import { useState, useEffect, useCallback, createContext, useContext, Suspense, lazy } from "react";
 import "./NewApp.css";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useSearchParams, Link } from "react-router-dom";
 import axios from "axios";
 import { Toaster, toast } from "sonner";
 import { Eye, EyeOff, Gamepad2, CreditCard, Users, BarChart3, Settings, LogOut, History, Shield, Wallet, Copy, Check, ChevronRight, Sparkles, Star, Download, ArrowDownToLine, ArrowUpFromLine, RefreshCw, DollarSign, Menu, X, Clock, Activity, Wand2, Rocket, Gift, Server } from "lucide-react";
-import MasterControlHub from "./components/MasterControlHub";
-import MasterControl from "./components/MasterControl";
-import DistributorPanel from "./components/DistributorPanel";
-import LandingPage from "./LandingPage";
 import { coverForName, logoForName } from "./components/GameCoverArt";
-import { ForgotPasswordPage, ResetPasswordPage, SettingsPage, AdminExtensions } from "./pages/Extensions";
-import NerveCenter from "./pages/NerveCenter";
-import BossMode from "./pages/BossMode";
 import DepositCelebration from "./components/DepositCelebration";
 import BtcDepositPanel from "./components/BtcDepositPanel";
-import LaunchChecklist from "./components/LaunchChecklist";
-import AdminGiftCards from "./components/AdminGiftCards";
+import LandingPage from "./LandingPage";
 import ErrorBoundary from "./components/ErrorBoundary";
+
+// Lazy-loaded — admin-only or non-player routes never ship in the initial bundle.
+const MasterControlHub = lazy(() => import("./components/MasterControlHub"));
+const MasterControl = lazy(() => import("./components/MasterControl"));
+const DistributorPanel = lazy(() => import("./components/DistributorPanel"));
+const NerveCenter = lazy(() => import("./pages/NerveCenter"));
+const BossMode = lazy(() => import("./pages/BossMode"));
+const LaunchChecklist = lazy(() => import("./components/LaunchChecklist"));
+const AdminGiftCards = lazy(() => import("./components/AdminGiftCards"));
+const ForgotPasswordPage = lazy(() => import("./pages/Extensions").then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import("./pages/Extensions").then((m) => ({ default: m.ResetPasswordPage })));
+const SettingsPage = lazy(() => import("./pages/Extensions").then((m) => ({ default: m.SettingsPage })));
+const AdminExtensions = lazy(() => import("./pages/Extensions").then((m) => ({ default: m.AdminExtensions })));
+const LoadingFallback = () => <div style={{ minHeight: "40vh", display: "flex", alignItems: "center", justifyContent: "center", color: "#d4af37" }}>Loading…</div>;
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://api.wah-lah.com";
 const API = `${BACKEND_URL}/api`;
@@ -309,7 +315,7 @@ const RegisterPage = () => {
             <div className="input-group">
               <label>Password</label>
               <div className="password-input">
-                <input data-testid="register-password" type={showPassword ? "text" : "password"} placeholder="Min 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                <input data-testid="register-password" type={showPassword ? "text" : "password"} placeholder="Min 8 characters" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
                 <button type="button" className="password-toggle" onClick={() => setShowPassword(!showPassword)}>
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -1709,7 +1715,7 @@ const SettingsTab = ({ user, onSuccess }) => {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
               />
             </div>
 
@@ -1720,7 +1726,7 @@ const SettingsTab = ({ user, onSuccess }) => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
               />
             </div>
 
@@ -2061,7 +2067,7 @@ const AdminPanel = () => {
         {activeTab === "dashboard" && (
           <div className="admin-dashboard">
             <h2>Dashboard</h2>
-            <LaunchChecklist />
+            <Suspense fallback={<LoadingFallback />}><LaunchChecklist /></Suspense>
             <div className="stats-grid">
               <div className="stat-card"><Users size={32} /><div className="stat-value">{stats.total_users || 0}</div><div className="stat-label">Users</div></div>
               <div className="stat-card"><CreditCard size={32} /><div className="stat-value">{stats.completed_transactions || 0}</div><div className="stat-label">Payments</div></div>
@@ -2076,7 +2082,7 @@ const AdminPanel = () => {
               <h2>Pilot Launch Checklist</h2>
               <p>Pre-flight gates before opening the doors to live traffic.</p>
             </div>
-            <LaunchChecklist />
+            <Suspense fallback={<LoadingFallback />}><LaunchChecklist /></Suspense>
           </div>
         )}
 
@@ -2086,7 +2092,7 @@ const AdminPanel = () => {
               <h2>Gift Card Queue</h2>
               <p>Fulfill pending gift-card redemptions manually. Paste code → Fulfill. User gets emailed.</p>
             </div>
-            <AdminGiftCards />
+            <Suspense fallback={<LoadingFallback />}><AdminGiftCards /></Suspense>
           </div>
         )}
 
@@ -2167,17 +2173,17 @@ const AdminPanel = () => {
         )}
 
         {activeTab === "nerve" && (
-          <div style={{ margin: "-20px -20px" }}><NerveCenter /></div>
+          <div style={{ margin: "-20px -20px" }}><Suspense fallback={<LoadingFallback />}><NerveCenter /></Suspense></div>
         )}
 
         {activeTab === "extensions" && (
           <div className="admin-section">
-            <AdminExtensions embedded />
+            <Suspense fallback={<LoadingFallback />}><AdminExtensions embedded /></Suspense>
           </div>
         )}
         {activeTab === "distributors" && (
           <div className="admin-section">
-            <DistributorPanel />
+            <Suspense fallback={<LoadingFallback />}><DistributorPanel /></Suspense>
           </div>
         )}
       </main>
@@ -2309,6 +2315,7 @@ function App() {
     <AuthProvider>
       <div className="App">
         <BrowserRouter>
+          <Suspense fallback={<LoadingFallback />}>
           <Routes>
             <Route path="/welcome" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
@@ -2327,6 +2334,7 @@ function App() {
             <Route path="/master-control/:platformId" element={<ProtectedRoute adminOnly><MasterControl /></ProtectedRoute>} />
             <Route path="/admin/distributors" element={<ProtectedRoute adminOnly><DistributorPanel /></ProtectedRoute>} />
           </Routes>
+          </Suspense>
         </BrowserRouter>
         <Toaster position="top-center" richColors />
       </div>
