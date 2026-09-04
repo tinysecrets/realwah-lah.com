@@ -4,8 +4,9 @@ These verify two things without ever needing real distributor credentials:
 
 1. The factory returns ``HttpHubBridge`` for hubs declaring ``api_base_url``
    (sugar_sweeps) and falls back to ``GenericHubBridge`` otherwise.
-2. A live ``ping`` against ``https://api.sugarsweeps.com/api/Auth/login`` with
-   bogus creds gets a clean 401 — proving the Vercel WAF bypass holds.
+2. A live ``ping`` against the sugar_sweeps login endpoint
+   (``https://sugarsweeps.com/api/proxy/api/Auth/login``) with bogus creds
+   gets a clean 401 — proving the Vercel WAF bypass holds.
 
 The second test hits a public endpoint over the internet; if outbound
 networking is sandboxed it is skipped.
@@ -27,14 +28,14 @@ from services.hub_http_bridge import HttpHubBridge  # noqa: E402
 def test_factory_routes_sugar_sweeps_to_http():
     b = make_bridge("sugar_sweeps", "u@x.com", "pw", base_url="https://sugarsweeps.com")
     assert isinstance(b, HttpHubBridge)
-    assert b.api_base == "https://api.sugarsweeps.com"
+    assert b.api_base == "https://sugarsweeps.com/api/proxy"
     assert b.api_paths.get("login") == "/api/Auth/login"
 
 
 def test_factory_falls_back_to_playwright_for_others():
     from services.hub_bridge import GenericHubBridge
 
-    b = make_bridge("bitbetwin", "u", "p")
+    b = make_bridge("bitplay", "u", "p")
     assert isinstance(b, GenericHubBridge)
     assert not isinstance(b, HttpHubBridge)
 
@@ -57,4 +58,4 @@ def test_live_ping_bad_creds_returns_clean_401():
     steps = diag.get("steps", [])
     assert steps and steps[0]["step"] == "login_post"
     assert steps[0]["status"] == 401
-    assert steps[0]["url"] == "https://api.sugarsweeps.com/api/Auth/login"
+    assert steps[0]["url"] == "https://sugarsweeps.com/api/proxy/api/Auth/login"
