@@ -23,7 +23,7 @@ from config.currency_config import (
     MAX_PURCHASE_USD_PER_DAY,
     MAX_PURCHASE_USD_PER_HOUR,
 )
-from models.payment_models import CheckoutCreateRequest, RedemptionRequestPayload
+from models.payment_models import CheckoutCreateRequest, GamePayload, RedemptionRequestPayload
 from services import btc_processor
 from services.currency_service import CurrencyService
 
@@ -47,19 +47,65 @@ def build_payment_router(db, get_current_user, get_admin_user) -> APIRouter:
     async def list_games(request: Request):
         """Return all active games (matching frontend's GameResponse shape)."""
         games = await db.games.find({"is_active": True}).to_list(length=100)
-        out = []
-        for g in games:
-            out.append({
-                "id": str(g.get("_id")),
-                "name": g.get("name", ""),
-                "logo_url": g.get("logo_url", ""),
-                "game_url": g.get("game_url", ""),
-                "description": g.get("description", ""),
-                "is_active": g.get("is_active", True),
-                "accent_color": g.get("accent_color", "#ff00ff"),
-                "created_at": g.get("created_at", ""),
-            })
-        return out
+        return [_game_doc(g) for g in games]
+
+    # ------------------------------------------------------------------
+    # Admin: game CRUD (drives the frontend's admin "Games" tab)
+    # ------------------------------------------------------------------
+    def _game_doc(g) -> dict:
+        return {
+            "id": str(g.get("_id")),
+            "name": g.get("name", ""),
+            "logo_url": g.get("logo_url", ""),
+            "game_url": g.get("game_url", ""),
+            "description": g.get("description", ""),
+            "is_active": g.get("is_active", True),
+            "accent_color": g.get("accent_color", "#ff00ff"),
+            "created_at": g.get("created_at", ""),
+        }
+
+    @router.get("/games/all")
+    async def list_all_games(request: Request):
+        """Admin: return every game (active + inactive) for management."""
+        await get_admin_user(request)
+        games = await db.games.find().to_list(length=200)
+        return [_game_doc(g) for g in games]
+
+    @router.post("/games")
+    async def create_game(payload: GamePayload, request: Request):
+        """Admin: add a new game card."""
+        await get_admin_user(request)
+        doc = {
+            **payload.model_dump(),
+            "created_at": _now_iso(),
+        }
+        result = await db.games.insert_one(doc)
+        return {"ok": True, "id": str(result.inserted_id)}
+
+    @router.put("/games/{game_id}")
+    async def update_game(game_id: str, payload: GamePayload, request: Request):
+        """Admin: edit an existing game card."""
+        await get_admin_user(request)
+        update = {
+            k: v
+            for k, v in payload.model_dump().items()
+            if k != "created_at"
+        }
+        result = await db.games.update_one(
+            {"_id": ObjectId(game_id)}, {"$set": update}
+        )
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Game not found")
+        return {"ok": True, "id": game_id}
+
+    @router.delete("/games/{game_id}")
+    async def delete_game(game_id: str, request: Request):
+        """Admin: remove a game card."""
+        await get_admin_user(request)
+        result = await db.games.delete_one({"_id": ObjectId(game_id)})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Game not found")
+        return {"ok": True, "id": game_id}
 
     # ------------------------------------------------------------------
     # Payment info

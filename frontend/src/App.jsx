@@ -1576,7 +1576,6 @@ const TransactionsTab = () => {
           {transactions.map((tx) => (
             <div key={tx.id} className={`transaction-row ${tx.status}`}>
               <div className="tx-icon">
-                {tx.payment_method === "stripe" && <CreditCard size={20} />}
                 {tx.payment_method === "crypto" && <span>₿</span>}
                 {tx.payment_method === "cashapp" && <span>$</span>}
                 {tx.payment_method === "chime" && <span>C</span>}
