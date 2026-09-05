@@ -5,7 +5,7 @@ import pytest
 # They are skipped by default unless RUN_BACKEND_TESTS=1 is set.
 # Self-contained unit tests (e.g. test_hub_http_bridge.py) always run so CI
 # can exercise them without a live backend.
-SELF_CONTAINED_FILES = {"test_hub_http_bridge.py"}
+SELF_CONTAINED_FILES = {"test_hub_http_bridge.py", "test_self_distributor_unit.py"}
 
 
 def pytest_collection_modifyitems(config, items):

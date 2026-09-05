@@ -378,6 +378,44 @@ class CurrencyService:
                 )
                 return
 
+            # Self-Distributor mode: don't hit the automated proxy pool. Queue a
+            # manual task ("send these credits") for the operator, who sends by
+            # hand on the game backend and confirms. Guarded by the same atomic
+            # compare-and-set on pool_transfer_status so webhook retries can
+            # never queue the same transfer twice.
+            from services.self_distributor import get_mode, create_manual_task
+
+            if (await get_mode(self.db)) == "manual":
+                claimed = await self.db.btc_deposits.update_one(
+                    {"id": deposit_id, "pool_transfer_status": "pending"},
+                    {"$set": {
+                        "pool_transfer_status": "awaiting_manual_send",
+                        "pool_transfer_started_at": datetime.now(timezone.utc).isoformat(),
+                    }},
+                )
+                if claimed.modified_count == 0:
+                    return
+                task_id = await create_manual_task(
+                    self.db,
+                    deposit_id=deposit_id,
+                    user_id=user_id,
+                    user_email=(user or {}).get("email", ""),
+                    platform=platform,
+                    recipient_username=recipient,
+                    amount_credits=amount,
+                    tx_hash=tx_hash,
+                    game_id=deposit.get("game_id"),
+                )
+                await self.db.btc_deposits.update_one(
+                    {"id": deposit_id},
+                    {"$set": {"distribution_task_id": task_id}},
+                )
+                logger.info(
+                    "manual-distributor queued: deposit=%s platform=%s recipient=%s credits=%s",
+                    deposit_id, platform, recipient, amount,
+                )
+                return
+
             # Atomic claim: only one dispatcher flips pending -> in_progress.
             claimed = await self.db.btc_deposits.update_one(
                 {"id": deposit_id, "pool_transfer_status": "pending"},

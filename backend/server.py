@@ -58,6 +58,7 @@ from routes.extensions import build_extensions_router
 from routes.telegram_bridge import build_telegram_router
 from routes.platform_jit import build_platform_router, ensure_platform_registered
 from routes.distributor_pool import build_distributor_pool_router, execute_pool_transfer
+from routes.self_distributor import build_self_distributor_router
 from routes.nerve_center import build_nerve_center_router
 from routes.genie import build_genie_router
 from routes.user_routes import build_user_router
@@ -410,6 +411,9 @@ api_router.include_router(
 )
 api_router.include_router(
     build_distributor_pool_router(db=db, get_admin_user=get_admin_user)
+)
+api_router.include_router(
+    build_self_distributor_router(db=db, get_admin_user=get_admin_user)
 )
 api_router.include_router(
     build_nerve_center_router(db=db, get_admin_user=get_admin_user)

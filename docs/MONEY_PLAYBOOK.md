@@ -113,6 +113,47 @@ Rates are capped at **50%** internally (so you can't accidentally set 500% and b
 
 ---
 
+## Run It Yourself — Self-Distributor Mode
+
+No third-party distributor, no wholesale buy-in. YOU are the distributor:
+
+1. Flip the mode ON (any time, live, no redeploy):
+
+   ```bash
+   POST /api/ext/distributor/settings
+   { "mode": "manual" }
+   ```
+
+2. Player deposits → instead of auto-routing through a third-party proxy, the
+   system queues a task: **"Send 500 credits to player1 on Fire Kirin."**
+3. Pull the queue, open that game's backend, type the username + the number,
+   hit send:
+
+   ```bash
+   GET /api/ext/distributor/queue
+   # → every pending task: platform, recipient username, exact credit amount
+   ```
+
+4. Confirm it went through:
+
+   ```bash
+   POST /api/ext/distributor/queue/<task_id>/confirm-sent
+   { "note": "sent on kirin" }
+   ```
+
+   The task flips to `done`, the deposit unlocks, playthrough is applied. If
+   you couldn't send it, `POST .../mark-failed` flags it for rework.
+
+**You keep the whole margin** — every credit you send already made you the fee
+on deposit (`cashtag` 12% / Stripe at par) with zero cost of goods. Flip back
+to automation anytime with `{ "mode": "auto" }`.
+
+- Mode + queue live in `distribution_settings` / `distribution_tasks`
+- Code: `backend/services/self_distributor.py`, `backend/routes/self_distributor.py`
+- Dashboard widget: `GET /api/ext/distributor/summary` (pending/done counts + pending credits)
+
+---
+
 ## Realistic Income Math
 
 At 100 active players, average $40 deposit/month, ~70% Cash App / 30% Stripe:
