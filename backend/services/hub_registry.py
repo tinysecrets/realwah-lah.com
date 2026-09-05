@@ -107,20 +107,43 @@ HUB_CONFIGS: Dict[str, dict] = {
         "api_base_url": "https://bitbetwin.cc",
         "api_paths": {
             "login": "/api/users/login/",
-            # Transfer endpoint — TBD (requires a non-rate-limited authenticated
-            # session to capture the exact path). Set from your own logged-in
-            # browser session: DevTools -> Network -> do one small transfer,
-            # copy the Method + path, then set "transfer" and the
-            # api_fields.recipient/.amount/.platform field names below.
-            # "transfer": "/api/...",
+            # Transfer = place an order that credits the recipient's chosen
+            # platform product. Confirmed 2026-09-05 from the shipped frontend
+            # (pages/checkout chunk -> module exports orders API): the checkout
+            # submit fires POST /api/orders/add with Bearer <token>.
+            "transfer": "/api/orders/add",
         },
         "api_fields": {
             "username": "email",
             "password": "password",
             "token": "token",  # top-level key in the /api/users/login/ response
-            # "recipient": "username",   # field name carrying the player username
-            # "amount": "amount",
-            # "platform": "platform",
+            # Recipient on BitBetWin is the target user's account EMAIL (the
+            # checkout page exposes a "User email" field for admins, i.e. the
+            # distributor -> player funding). Not a per-game username.
+            "recipient": "user_email",
+        },
+        # BitBetWin's order API needs cart-shaped JSON, not {recipient, amount,
+        # platform}. transfer_payload="order" makes HttpHubBridge.transfer()
+        # build {orderItems:[...], itemsPrice, totalPrice, couponCode,
+        # user_email, payment_method}. Products are $1.00 credit units, so
+        # qty == amount in dollars.
+        "transfer_payload": "order",
+        "payment_method": "wallet",  # "wallet"=Main balance (internal, no crypto)
+        "order_unit_price": 1,
+        # realwah platform key -> BitBetWin product (slug/id/name) from the
+        # public GET /api/products/ (confirmed 2026-09-05, HTTP 200 unauthenticated).
+        "platform_products": {
+            "fire_kirin":     {"id": 623599, "slug": "fire-kirin",          "name": "Fire Kirin"},
+            "juwa":           {"id": 623586, "slug": "juwa",                "name": "Juwa"},
+            "juwa2":          {"id": 623628, "slug": "juwa2",               "name": "Juwa2.0"},
+            "ultra_panda":    {"id": 623614, "slug": "ultra-panda",         "name": "Ultra Panda"},
+            "orion_stars":    {"id": 623600, "slug": "orion-stars",         "name": "Orion Stars"},
+            "game_vault":     {"id": 623594, "slug": "game-vault-casino",   "name": "Game Vault"},
+            "vblink":         {"id": 623621, "slug": "v-blink",             "name": "V-Blink"},
+            "milky_way":      {"id": 623596, "slug": "milky-way-casino",    "name": "Milky Way Casino"},
+            "panda_master":   {"id": 623622, "slug": "panda-master",        "name": "Panda Master"},
+            "vegas_x":        {"id": 10803,  "slug": "vegas-x",             "name": "VegasX"},
+            "river_sweeps":   {"id": 10804,  "slug": "riversweeps",         "name": "Riversweeps"},
         },
         "login_path": "/login",
         "dashboard_path": "/platforms",

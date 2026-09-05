@@ -150,6 +150,50 @@ class HttpHubBridge:
         return True, f"Login OK via {self.api_base} (HTTP fast-path, no Playwright)", self.diagnostic
 
     # --- transfer ---
+    def _build_transfer_body(self, recipient: str, amount: float, platform: str) -> dict:
+        """Build the transfer request body for this hub.
+
+        Most hubs use the flat ``{"<recipient>": ..., "<amount>": ...,
+        "<platform>": ...}`` shape. Hubs whose transfer endpoint is a cart
+        order (BitBetWin) declare ``transfer_payload: "order"`` in
+        ``hub_registry.HUB_CONFIGS``; the bridge then emits the order JS body
+        ``{orderItems, itemsPrice, totalPrice, couponCode, user_email,
+        payment_method}`` with the platform product resolved from
+        ``platform_products`` and ``qty`` = dollar amount.
+        """
+        if self.hub.get("transfer_payload") != "order":
+            recipient_field = self.api_fields.get("recipient", "username")
+            amount_field = self.api_fields.get("amount", "amount")
+            platform_field = self.api_fields.get("platform", "platform")
+            return {
+                recipient_field: recipient,
+                amount_field: int(amount),
+                platform_field: platform,
+            }
+
+        products = self.hub.get("platform_products", {})
+        product = products.get(platform, {}) or {}
+        unit_price = int(self.hub.get("order_unit_price", 1))
+        qty = int(amount)
+        total = qty * unit_price
+        item = {
+            "product": product.get("slug", platform),
+            "slug": product.get("slug", platform),
+            "name": product.get("name", platform),
+            "id": product.get("id"),
+            "price": unit_price,
+            "wager": True,
+            "qty": qty,
+        }
+        return {
+            "orderItems": [item],
+            "itemsPrice": total,
+            "totalPrice": total,
+            "couponCode": "",
+            "user_email": recipient,
+            "payment_method": self.hub.get("payment_method", "wallet"),
+        }
+
     async def transfer(
         self, recipient: str, amount: float, platform: str
     ) -> Tuple[bool, str, Dict[str, Any]]:
@@ -164,15 +208,7 @@ class HttpHubBridge:
                 "hub_registry.py for this hub. (Login + token retrieval works.)"
             ), self.diagnostic
 
-        recipient_field = self.api_fields.get("recipient", "username")
-        amount_field = self.api_fields.get("amount", "amount")
-        platform_field = self.api_fields.get("platform", "platform")
-
-        body = {
-            recipient_field: recipient,
-            amount_field: int(amount),
-            platform_field: platform,
-        }
+        body = self._build_transfer_body(recipient, amount, platform)
         url = self.api_base + transfer_path
         client = await self._get_client()
 
