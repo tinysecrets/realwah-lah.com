@@ -1,0 +1,286 @@
+"""Distributor Hub Registry.
+
+Each entry defines how the generic Playwright bridge should drive a specific
+distributor portal. Adding a new hub = add a dict here + pilot-test via the
+admin `ping` endpoint. No new Python class required.
+
+Supported hubs
+--------------
+- sugar_sweeps   → https://sugarsweeps.com  (legacy; uses SugarSweepsBridge directly)
+- bitbetwin      → https://bitbetwin.cc
+- bitplay        → https://bitplay.ag
+- bitspinwin     → https://bitspinwin.co
+- bitofgold      → https://bitofgold.cc
+- win777         → https://win777.us
+
+Selector notes
+-------------
+Sites share a very common dashboard layout (platform list → transfer modal per
+tile). Selectors below are *best-effort starting points* derived from public
+homepages. Each admin operator can refine them per-hub in ``HUB_CONFIGS`` without
+code changes to the bridge.
+
+Pull capability (credit loop)
+-----------------------------
+``pool_pull`` ("pull Game Credits from a player's game account BACK to the
+distributor seat") is **opt-in per hub** via ``pull_supported``. All hubs start
+at ``False`` until a real pull/refund endpoint has been verified against a live
+session. To switch a hub on:
+
+1. Set ``pull_supported: True``.
+2. Add the endpoint path to ``api_paths.pull`` (cart-order hubs that pull via a
+   refund/negative order should also add ``pull_payload: "order"``).
+3. Pilot-pull via the admin ``POST /api/ext/pool/admin/proxies/{id}/test-pull``
+   endpoint before ever letting the redemption loop try it automatically.
+
+Until ``pull_supported`` is true on the hub *and* on the proxy, the pool's pull
+selection treats the seat as pull-incapable and redemptions fall back to today's
+wholesale behavior (BTC paid, platform credits left in play).
+"""
+from __future__ import annotations
+
+from typing import Dict, List
+
+HUB_CONFIGS: Dict[str, dict] = {
+    "sugar_sweeps": {
+        "label": "Sugar Sweeps",
+        "base_url": "https://sugarsweeps.com",
+        # API base URL — Vercel proxy path (confirmed 2026-09-04).
+        # The browser's API calls go through sugarsweeps.com/api/proxy/...
+        # which forwards to edge.sugarsweeps.com via a Cloudflare Worker.
+        # Response headers: x-matched-path=/api/proxy/[...path],
+        # x-worker-target-host=edge.sugarsweeps.com.
+        "api_base_url": "https://sugarsweeps.com/api/proxy",
+        "api_paths": {
+            "login": "/api/Auth/login",
+            # ------------------------------------------------------------------
+            # TBD — live-verification required. These are the ONLY remaining
+            # values that keep P2P funding from going live. Fill them from your
+            # OWN logged-in browser session (DevTools -> Network -> Fetch/XHR):
+            #
+            #   1. Transfer: do one small P2P transfer, click the request, copy
+            #      the Method + URL path (e.g. /api/Transfer/p2p) into
+            #      "transfer" and the Request-Payload field names into
+            #      api_fields.recipient / .amount / .platform.
+            #   2. Register (if the dashboard creates players): same capture,
+            #      path -> "register", body field names -> api_fields.username
+            #      / .password.
+            #   3. Token key: the login request's Response JSON top-level key
+            #      (e.g. accessToken) -> api_fields.token.
+            #
+            # Paste only the path/field-name strings — never credentials.
+            # Once set, HttpHubBridge.transfer() and the HubRegisterAdapter
+            # (routes/platform_adapters.py) go live, pulling the distributor
+            # proxy credentials from the encrypted vault at runtime.
+            # ------------------------------------------------------------------
+            # Transfer endpoint — confirmed 2026-09-04 via live DevTools capture.
+            # Full URL: sugarsweeps.com/api/proxy/api/P2PTransfers/create-p2p-transfer
+            # Auth: Authorization: Bearer {idToken} (NOT accessToken!)
+            # Body: JSON — field names TBD (waiting for payload capture).
+            "transfer": "/api/P2PTransfers/create-p2p-transfer",
+            # "register": "/api/Auth/register",
+        },
+        "api_fields": {
+            "username": "email",
+            "password": "password",
+            # "token": "accessToken",        # top-level key in the login response
+            # "recipient": "username",       # field name carrying the player's game_username
+            # "amount": "amount",
+            # "platform": "platform",        # omit if the transfer body has no per-game field
+        },
+        "pull_supported": False,
+        "login_path": "/",
+        "dashboard_path": "/user/dashboard",
+        "pre_login_click": [
+            'button:has-text("Login"):visible',  # Opens the login modal (Radix dialog)
+        ],
+        "selectors": {
+            # Scope all inputs to the modal (role="dialog") — the page has
+            # both a Register form and a Login modal and we need the modal one.
+            "email":     ['[role="dialog"] input[type="email"]', 'input[type="email"][placeholder*="email" i]', 'input[type="email"]'],
+            "password":  ['[role="dialog"] input[type="password"]:not([placeholder*="Confirm" i])', 'input[type="password"]:not([placeholder*="Confirm" i])'],
+            "submit":    ['[role="dialog"] button:has-text("Login"):visible', '[role="dialog"] button[type="submit"]', 'form button[type="submit"]'],
+            "transfer_nav": ['a[href*="transfer"]', 'a[href*="user/dashboard"]', 'button:has-text("Transfer")'],
+            "platform_dropdown": ['select[name="platform"]', '[role="combobox"]', 'button:has-text("Select a platform")'],
+            "recipient": ['input[name="recipient"]', 'input[name="username"]', 'input[name="player"]'],
+            "amount":    ['input[name="amount"]', 'input[type="number"]'],
+            "confirm":   ['button[type="submit"]', 'button:has-text("Transfer")', 'button:has-text("Send")'],
+            "balance":   ['.balance', '#balance', '[data-balance]', 'span:has-text("Balance")'],
+        },
+        "supported_platforms": [
+            "fire_kirin", "orion_stars", "ultra_panda", "juwa", "juwa2",
+            "panda_master", "game_vault", "vblink", "milky_way", "noble",
+            "vegas_x", "river_sweeps",
+        ],
+    },
+    "bitbetwin": {
+        "label": "BitBetWin",
+        "base_url": "https://bitbetwin.cc",
+        # API base URL — the Next.js JSON backend is served from the same origin
+        # (confirmed 2026-09-04). Login is POST /api/users/login/ with
+        # {"email","password"} returning the user object with a top-level
+        # "token" field. HTTP fast-path is far more reliable than the Playwright
+        # scrape, which is intermittently blocked by the site's login rate
+        # limiter (429) + bot detection.
+        "api_base_url": "https://bitbetwin.cc",
+        "api_paths": {
+            "login": "/api/users/login/",
+            # Transfer = place an order that credits the recipient's chosen
+            # platform product. Confirmed 2026-09-05 from the shipped frontend
+            # (pages/checkout chunk -> module exports orders API): the checkout
+            # submit fires POST /api/orders/add with Bearer <token>.
+            "transfer": "/api/orders/add",
+        },
+        "api_fields": {
+            "username": "email",
+            "password": "password",
+            "token": "token",  # top-level key in the /api/users/login/ response
+            # Recipient on BitBetWin is the target user's account EMAIL (the
+            # checkout page exposes a "User email" field for admins, i.e. the
+            # distributor -> player funding). Not a per-game username.
+            "recipient": "user_email",
+        },
+        # BitBetWin's order API needs cart-shaped JSON, not {recipient, amount,
+        # platform}. transfer_payload="order" makes HttpHubBridge.transfer()
+        # build {orderItems:[...], itemsPrice, totalPrice, couponCode,
+        # user_email, payment_method}. Products are $1.00 credit units, so
+        # qty == amount in dollars.
+        "transfer_payload": "order",
+        "payment_method": "wallet",  # "wallet"=Main balance (internal, no crypto)
+        "order_unit_price": 1,
+        "pull_supported": False,
+        # realwah platform key -> BitBetWin product (slug/id/name) from the
+        # public GET /api/products/ (confirmed 2026-09-05, HTTP 200 unauthenticated).
+        "platform_products": {
+            "fire_kirin":     {"id": 623599, "slug": "fire-kirin",          "name": "Fire Kirin"},
+            "juwa":           {"id": 623586, "slug": "juwa",                "name": "Juwa"},
+            "juwa2":          {"id": 623628, "slug": "juwa2",               "name": "Juwa2.0"},
+            "ultra_panda":    {"id": 623614, "slug": "ultra-panda",         "name": "Ultra Panda"},
+            "orion_stars":    {"id": 623600, "slug": "orion-stars",         "name": "Orion Stars"},
+            "game_vault":     {"id": 623594, "slug": "game-vault-casino",   "name": "Game Vault"},
+            "vblink":         {"id": 623621, "slug": "v-blink",             "name": "V-Blink"},
+            "milky_way":      {"id": 623596, "slug": "milky-way-casino",    "name": "Milky Way Casino"},
+            "panda_master":   {"id": 623622, "slug": "panda-master",        "name": "Panda Master"},
+            "vegas_x":        {"id": 10803,  "slug": "vegas-x",             "name": "VegasX"},
+            "river_sweeps":   {"id": 10804,  "slug": "riversweeps",         "name": "Riversweeps"},
+        },
+        "login_path": "/login",
+        "dashboard_path": "/platforms",
+        "selectors": {
+            "email":     ['input[type="email"]', 'input[name="email"]', 'input[name="username"]'],
+            "password":  ['input[type="password"]'],
+            "submit":    ['button[type="submit"]', 'button:has-text("Login")', 'button:has-text("Sign In")'],
+            "transfer_nav": ['a[href*="transfer"]', 'a[href*="platforms"]', 'button:has-text("Recharge")'],
+            "platform_dropdown": ['select[name="platform"]', '[role="combobox"]', 'button:has-text("Select")'],
+            "recipient": ['input[name="username"]', 'input[name="recipient"]', 'input[placeholder*="username" i]'],
+            "amount":    ['input[name="amount"]', 'input[type="number"]'],
+            "confirm":   ['button[type="submit"]', 'button:has-text("Recharge")', 'button:has-text("Transfer")'],
+            "balance":   ['.balance', '[data-balance]', 'span:has-text("Balance")'],
+        },
+        "supported_platforms": [
+            "fire_kirin", "orion_stars", "ultra_panda", "juwa", "panda_master",
+            "game_vault", "vblink", "milky_way",
+        ],
+    },
+    "bitplay": {
+        "label": "BitPlay",
+        "base_url": "https://bitplay.ag",
+        "login_path": "/login",
+        "dashboard_path": "/user/dashboard",
+        "pull_supported": False,
+        "selectors": {
+            "email":     ['input[name="email"]', 'input[name="username"]', 'input[type="email"]'],
+            "password":  ['input[type="password"]'],
+            "submit":    ['button[type="submit"]', 'button:has-text("Login")'],
+            "transfer_nav": ['a[href*="platforms"]', 'a[href*="transfer"]'],
+            "platform_dropdown": ['select', '[role="combobox"]'],
+            "recipient": ['input[name="username"]', 'input[name="player"]'],
+            "amount":    ['input[name="amount"]', 'input[type="number"]'],
+            "confirm":   ['button[type="submit"]', 'button:has-text("Submit")', 'button:has-text("Transfer")'],
+            "balance":   ['.balance', '[data-balance]'],
+        },
+        "supported_platforms": [
+            "fire_kirin", "orion_stars", "ultra_panda", "juwa", "panda_master", "game_vault",
+        ],
+    },
+    "bitspinwin": {
+        "label": "BitSpinWin",
+        "base_url": "https://bitspinwin.co",
+        "login_path": "/login",
+        "dashboard_path": "/user/dashboard",
+        "pull_supported": False,
+        "selectors": {
+            "email":     ['input[name="email"]', 'input[type="email"]'],
+            "password":  ['input[type="password"]'],
+            "submit":    ['button[type="submit"]', 'button:has-text("Login")'],
+            "transfer_nav": ['a[href*="platforms"]', 'a[href*="dashboard"]'],
+            "platform_dropdown": ['select', '[role="combobox"]'],
+            "recipient": ['input[name="username"]', 'input[name="player"]'],
+            "amount":    ['input[name="amount"]', 'input[type="number"]'],
+            "confirm":   ['button[type="submit"]', 'button:has-text("Transfer")'],
+            "balance":   ['.balance', '[data-balance]'],
+        },
+        "supported_platforms": [
+            "fire_kirin", "orion_stars", "ultra_panda", "juwa", "panda_master", "game_vault",
+        ],
+    },
+    "bitofgold": {
+        "label": "BitOfGold",
+        "base_url": "https://bitofgold.cc",
+        "login_path": "/login",
+        "dashboard_path": "/user/platforms",
+        "pull_supported": False,
+        "selectors": {
+            "email":     ['input[name="email"]', 'input[type="email"]', 'input[name="username"]'],
+            "password":  ['input[type="password"]'],
+            "submit":    ['button[type="submit"]', 'button:has-text("Login")'],
+            "transfer_nav": ['a[href*="platforms"]', 'a[href*="transfer"]'],
+            "platform_dropdown": ['select', '[role="combobox"]'],
+            "recipient": ['input[name="username"]', 'input[name="player"]'],
+            "amount":    ['input[name="amount"]', 'input[type="number"]'],
+            "confirm":   ['button[type="submit"]', 'button:has-text("Transfer")'],
+            "balance":   ['.balance', '[data-balance]'],
+        },
+        "supported_platforms": [
+            "fire_kirin", "orion_stars", "ultra_panda", "juwa", "panda_master", "game_vault",
+        ],
+    },
+    "win777": {
+        "label": "Win777",
+        "base_url": "https://win777.us",
+        "login_path": "/login",
+        "dashboard_path": "/user/platforms",
+        "pull_supported": False,
+        "selectors": {
+            "email":     ['input[name="email"]', 'input[type="email"]', 'input[name="username"]'],
+            "password":  ['input[type="password"]'],
+            "submit":    ['button[type="submit"]', 'button:has-text("Login")'],
+            "transfer_nav": ['a[href*="platforms"]', 'a[href*="transfer"]'],
+            "platform_dropdown": ['select', '[role="combobox"]'],
+            "recipient": ['input[name="username"]', 'input[name="player"]'],
+            "amount":    ['input[name="amount"]', 'input[type="number"]'],
+            "confirm":   ['button[type="submit"]', 'button:has-text("Transfer")'],
+            "balance":   ['.balance', '[data-balance]'],
+        },
+        "supported_platforms": [
+            "fire_kirin", "orion_stars", "ultra_panda", "juwa", "panda_master", "game_vault",
+        ],
+    },
+}
+
+
+def list_hubs() -> List[dict]:
+    return [
+        {
+            "hub_type": k,
+            "label": v["label"],
+            "base_url": v["base_url"],
+            "supported_platforms": v.get("supported_platforms", []),
+            "pull_supported": bool(v.get("pull_supported", False)),
+        }
+        for k, v in HUB_CONFIGS.items()
+    ]
+
+
+def get_hub(hub_type: str) -> dict:
+    return HUB_CONFIGS.get(hub_type, HUB_CONFIGS["sugar_sweeps"])

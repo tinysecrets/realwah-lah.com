@@ -1,0 +1,5 @@
+automation:
+  auto_issue_session: true
+  remote_control: true
+  # Enable remote_control to allow authorized automation agents to interact with issues/sessions when configured
+  # Review repository security settings before enabling in production

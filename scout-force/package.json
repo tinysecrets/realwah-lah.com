@@ -1,0 +1,15 @@
+{
+  "name": "wahlah-scout-force",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Free-tier AI scouting team: always-on agents that gather new-player leads across world regions for WAH-LAH.",
+  "type": "module",
+  "main": "src/worker.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.123.0"
+  }
+}

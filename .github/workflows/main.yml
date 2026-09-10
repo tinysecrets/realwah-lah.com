@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail on known PII / secret patterns
+        run: |
+          # The payment tag, operator mailbox, and infra tokens must never be committed.
+          # (This workflow file is excluded — it necessarily names the patterns.)
+          if grep -rInE '\$WahLah|REDACTED_CASHTAG|jrs092393|XcbXn4ag' \
+            --exclude-dir=.git --exclude-dir=.github --exclude=yarn.lock --exclude=package-lock.json --exclude='*.png' .; then
+            echo "::error::PII/secret pattern found in the tree. Remove it and rotate the credential."
+            exit 1
+          fi
+          echo "PII/secret-pattern scan clean."
+      - name: detect-secrets baseline check
+        run: |
+          pip install detect-secrets==1.5.0
+          detect-secrets scan --baseline .secrets.baseline
+
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r backend/requirements.txt pytest requests
+      - name: Syntax-check entire backend (catches import-time breakage app-wide)
+        run: python -m compileall -q backend
+      - name: Run self-contained backend unit + regression tests
+        run: python -m pytest backend/tests/test_hub_http_bridge.py backend/tests/test_self_distributor_unit.py backend/tests/test_legal_router.py -q
+        env:
+          SKIP_NET_TESTS: "1"
+      - name: Collect integration tests (skipped without a live backend)
+        run: python -m pytest backend/tests --collect-only -q | tail -1
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+      - run: yarn --cwd frontend install --frozen-lockfile
+      - run: yarn --cwd frontend test
+      - run: yarn --cwd frontend build
+        env:
+          REACT_APP_BACKEND_URL: https://api.wah-lah.com
+          CI: false

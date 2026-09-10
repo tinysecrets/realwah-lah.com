@@ -1,0 +1,94 @@
+# WAH-LAH — .gitignore (cleaned)
+
+# VCS / IDE
+.git
+.vscode
+.idea
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+ENV/
+.envs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / frontend
+node_modules/
+frontend/node_modules/
+frontend/.cache/
+frontend/build/
+genie-sidekick/node_modules
+genie-sidekick/dist
+
+# Builds / dist
+build/
+dist/
+out/
+
+# Logs / reports
+*.log
+test_reports/
+tests/__snapshots__/
+*.tmp
+coverage/
+
+# Docker / local deploy
+Dockerfile.local
+docker-compose.local.yml
+.fly/
+.wahlah/
+.wahlah-secrets.env
+.genie-secrets.env
+
+# Secrets (do not commit)
+.env
+backend/.env
+*.env
+.env.*
+# Keep env examples tracked
+!.env.example
+!.env.*.example
+
+# Temp / uploads
+/tmp/
+uploads/
+**/.uploads/
+*.zip
+*.tar
+*.tar.gz
+
+# Misc
+.credentials
+*.pem
+*.key
+
+# Ignore build artifacts and caches
+.cache/
+frontend/node_modules/.cache/
+
+# Deployment artifacts
+.vercel
+
+# Local-only / legacy
+.emergent/
+.gitconfig
+hello-fly/
+memory/test_credentials.md
+
+# Ignore backend temporary queues and generated previews
+backend/tmp/
+
+# Ensure editors and system files
+.DS_Store
+Thumbs.db

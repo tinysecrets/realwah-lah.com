@@ -1,0 +1,206 @@
+services:
+  - type: web
+    name: real-wah-lah-com
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # Set Atlas connection string in Render Dashboard → Environment.
+      - key: MONGO_URL
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: DB_NAME
+        value: wahlah_prod
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: FRONTEND_URL
+        value: https://wah-lah.com
+      - key: PASSWORD_RESET_PATH
+        value: /reset-password
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: COOKIE_SAMESITE
+        value: "lax"
+      - key: APP_ENV
+        value: "production"
+      # Production is always behind the Cloudflare API proxy, so proxy
+      # headers (CF-Connecting-IP) are trusted for rate limiting + geoblock.
+      - key: TRUST_PROXY_HEADERS
+        value: "true"
+      - key: RATE_LIMIT_DEFAULT
+        value: "120/minute"
+      - key: RATE_LIMIT_LOGIN
+        value: "20/minute"
+      - key: RATE_LIMIT_REGISTER
+        value: "10/minute"
+      - key: PORT
+        value: "10000"
+      # Bitcoin deposit processing (BlockCypher)
+      - key: BLOCKCYPHER_TOKEN
+        sync: false
+      - key: BLOCKCYPHER_STATIC_ADDRESS
+        sync: false
+      - key: BLOCKCYPHER_HD_WALLET
+        value: wah_lah_deposits
+      - key: BTC_MIN_CONFIRMATIONS
+        value: "2"
+      # No default: if the price oracle dies and this is unset, deposits and
+      # payouts HALT loudly instead of mispricing at a stale constant. Set a
+      # conscious fallback ONLY if you accept stale-price risk.
+      - key: BTC_FALLBACK_USD
+        sync: false
+      # Deposit reconciler — automatically settles confirmed BTC deposits even
+      # when the BlockCypher webhook is missed (idempotent, restart-safe).
+      - key: DEPOSIT_RECONCILE_ENABLED
+        value: "true"
+      - key: DEPOSIT_RECONCILE_INTERVAL_MIN
+        value: "10"
+      - key: BTC_RECONCILE_MATCH_TOLERANCE
+        value: "0.10"
+      - key: PUBLIC_API_URL
+        sync: false
+      # Scout Force lead ingestion (Worker LEADS_TOKEN must match exactly).
+      # ROTATE: this token was previously committed to git history — generate
+      # a fresh one, set it here AND as the Worker's LEADS_TOKEN secret.
+      - key: SCOUT_LEADS_TOKEN
+        sync: false
+      # On-duty watchdog alert recipients (comma-separated). Unset = no emails.
+      - key: ALERT_EMAILS
+        sync: false
+      # Telegram ops bridge (off unless you run it) + Genie escalation relay:
+      # when TELEGRAM_ESCALATION_ENABLED is true, [ESCALATE] events ping the
+      # chat instantly so a human answers while the player waits.
+      - key: TELEGRAM_ENABLED
+        value: "false"
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_ESCALATION_ENABLED
+        value: "false"
+      - key: TELEGRAM_ESCALATION_CHAT_ID
+        sync: false
+      # Bitcoin payout custody (locally-custodied HD funding wallet).
+      # BTC_PAYOUT_XPRV is cash: keep the hot wallet small, sweep the rest to
+      # cold storage, and plan a move to a secrets manager / KMS / multisig.
+      - key: BTC_PAYOUT_XPRV
+        sync: false
+      - key: BTC_PAYOUT_FEE_SAT_PER_BYTE
+        value: "3"
+      # Per-transaction payout ceiling in satoshis (e.g. 500000 ~= 0.005 BTC).
+      # 0 = uncapped (not recommended). Set this.
+      - key: BTC_PAYOUT_MAX_SAT
+        value: "500000"
+      # LLM (Boss Genie + player Concierge chat)
+      - key: CEREBRAS_API_KEY
+        sync: false
+      - key: CEREBRAS_MODEL
+        value: qwen-3-235b-a22b-instruct-2507
+      # Player-Genie fallback: when Cerebras fails, Concierge chat falls over
+      # here. Unset = chat 503s into the ticket fallback (safe, tested).
+      - key: GENIE_FALLBACK_API_KEY
+        sync: false
+      - key: GENIE_FALLBACK_BASE_URL
+        value: https://api.openai.com/v1
+      - key: GENIE_FALLBACK_MODEL
+        value: gpt-4o-mini
+      # Optional Boss providers (Ollama is localhost-only — never set on Render).
+      - key: VENICE_API_KEY
+        sync: false
+      - key: VENICE_MODEL
+        value: venice-uncensored
+      # Error tracking
+      - key: SENTRY_DSN
+        sync: false
+      # Persona KYC
+      - key: PERSONA_API_KEY
+        sync: false
+      - key: PERSONA_TEMPLATE_ID_BASIC
+        sync: false
+      - key: PERSONA_TEMPLATE_ID_ENHANCED
+        sync: false
+      - key: PERSONA_WEBHOOK_SECRET
+        sync: false
+      - key: PERSONA_ENVIRONMENT
+        value: production
+      # BTC Payout gateway
+      - key: BTCPAY_API_URL
+        sync: false
+      - key: BTCPAY_API_KEY
+        sync: false
+      - key: BTCPAY_STORE_ID
+        sync: false
+      - key: BTCPAY_WEBHOOK_SECRET
+        sync: false
+      - key: BTC_GATEWAY_TYPE
+        value: custody
+      # Compliance — geoblock FAILS CLOSED: lookup errors deny. Never set
+      # GEOBLOCK_FAIL_CLOSED=false in production.
+      - key: BLOCKED_STATES
+        value: "WA,ID,MT,NV,LA,TN,MI,UT,AZ"
+      - key: GEOBLOCK_FAIL_CLOSED
+        value: "true"
+      - key: KYC_BASIC_THRESHOLD_USD
+        value: "500"
+      - key: KYC_ENHANCED_THRESHOLD_USD
+        value: "5000"
+      - key: CTR_THRESHOLD_USD
+        value: "10000"
+      - key: SAR_FREQ_WINDOW_HOURS
+        value: "24"
+      - key: SAR_FREQ_THRESHOLD
+        value: "3"
+      # Host enforcement
+      - key: ENFORCE_CANONICAL_HOST
+        value: "true"
+      - key: CANONICAL_HOST
+        value: wah-lah.com
+      # Revenue
+      - key: CASHTAG_KEEP_RATE
+        value: "0.12"
+      - key: GIFTCARD_FEE_RATE
+        value: "0.05"
+      - key: BTC_FEE_RATE
+        value: "0.10"
+      # REQUIRED: encrypts stored distributor-proxy credentials (proxy_pool /
+      # crypto_vault). Generate: python -c 'from cryptography.fernet import
+      # Fernet; print(Fernet.generate_key().decode())'. App refuses to boot
+      # proxy features without it.
+      - key: PROXY_ENCRYPTION_KEY
+        sync: false
+      # Credit loop (pool_pull) — reclaim redeemed platform credits to seats.
+      # LIVE. Safe by design: pull only fires when a hub AND proxy both declare
+      # pull_supported (none do yet → clean "unsupported" → wholesale fallback).
+      # It never blocks or fails a redemption.
+      - key: POOL_PULL_ENABLED
+        value: "true"
+      # Credit rebalancer (sweep-to-lowest + capacity alert). LIVE.
+      # Real sweeps still require an explicit dry_run=false invocation; the
+      # nightly pool resync only ever runs it dry-run.
+      - key: POOL_REBALANCE_ENABLED
+        value: "true"
+      # Pool balance resync (nightly) — refreshes each distributor seat's real
+      # balance from its hub, then runs a SAFE dry-run rebalance on the fresh
+      # picture. Hubs without a balance endpoint report "unsupported" and their
+      # cached balance stays "unknown" (floor rule cannot mis-disable them).
+      - key: POOL_RESYNC_ENABLED
+        value: "true"
+      - key: POOL_RESYNC_INTERVAL_MIN
+        value: "1440"
+      - key: POOL_RESYNC_RUN_REBALANCE
+        value: "true"
+      # Self-distributor: hours before a queued task flags overdue in /summary.
+      - key: DISTRIBUTOR_OVERDUE_HOURS
+        value: "4"
+

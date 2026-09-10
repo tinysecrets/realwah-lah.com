@@ -1,0 +1,15 @@
+[Unit]
+Description=WAH-LAH Telegram Bridge Worker
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/home/USERNAME/workspace/realwah-lah.com
+ExecStart=/usr/bin/env bash -lc 'while true; do /usr/bin/python3 backend/scripts/process_telegram_queue.py; sleep ${BRIDGE_POLL_INTERVAL:-60}; done'
+Restart=on-failure
+RestartSec=10
+EnvironmentFile=/home/USERNAME/workspace/realwah-lah.com/backend/.env
+
+[Install]
+WantedBy=multi-user.target

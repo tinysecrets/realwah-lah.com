@@ -1,0 +1,25 @@
+name = "scout-force"
+main = "src/worker.js"
+compatibility_date = "2026-08-16"
+
+# Free cron: every 6 hours the scout team wakes, sweeps the world, and
+# writes leads to MongoDB. No per-run cost on Cloudflare's Workers free tier.
+[triggers]
+crons = [ "0 */6 * * *" ]
+
+# Scout persistent memory (dedupe + last-run state). KV namespaces carry zero
+# monthly cost on the free tier.
+[[kv_namespaces]]
+binding = "SCOUT_KV"
+id = "358d61ee1cd84f10bb8c33cfe084a811"
+
+# Workers AI = the scouts' reasoning brain (free-tier inference).
+[ai]
+binding = "AI"
+
+# Runtime config: where leads get POSTed + MongoDB name + (optional) model override.
+[vars]
+LEADS_WEBHOOK = "https://realwah-lah-com-8v2l.onrender.com/api/admin/scout/leads"
+MONGO_DB = "wahlah"
+SCOUT_AI_MODEL = "@cf/meta/llama-3.1-8b-instruct-fast"
+SCOUT_TEAM = '["north-america","south-america","europe","africa","asia-pacific","mine-niche"]'
