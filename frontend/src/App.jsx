@@ -68,12 +68,14 @@ const AuthProvider = ({ children }) => {
     setUser(false);
   };
 
-  const refreshUser = async () => {
+  // Stable identity: Dashboard/PaymentSuccess effects depend on this — a plain
+  // function re-created every render refires those effects in an infinite loop.
+  const refreshUser = useCallback(async () => {
     try {
       const { data } = await axios.get(`${API}/auth/me`);
       setUser(data);
     } catch { setUser(false); }
-  };
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout, refreshUser }}>
@@ -2372,5 +2374,39 @@ const AdminTxFilter = ({ onChange }) => {
     </div>
   );
 };
+
+function App() {
+  return (
+    <ErrorBoundary>
+    <AuthProvider>
+      <div className="App">
+        <BrowserRouter>
+          <Suspense fallback={<LoadingFallback />}>
+          <Routes>
+            <Route path="/welcome" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/payment/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
+            <Route path="/payment/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPanel /></ProtectedRoute>} />
+            <Route path="/admin/nerve-center" element={<ProtectedRoute adminOnly><NerveCenter /></ProtectedRoute>} />
+            <Route path="/boss" element={<ProtectedRoute adminOnly><BossMode /></ProtectedRoute>} />
+            <Route path="/admin/extensions" element={<Navigate to="/admin" replace />} />
+            <Route path="/master-control" element={<ProtectedRoute adminOnly><MasterControlHub /></ProtectedRoute>} />
+            <Route path="/master-control/:platformId" element={<ProtectedRoute adminOnly><MasterControl /></ProtectedRoute>} />
+            <Route path="/admin/distributors" element={<ProtectedRoute adminOnly><DistributorPanel /></ProtectedRoute>} />
+          </Routes>
+          </Suspense>
+        </BrowserRouter>
+        <Toaster position="top-center" richColors />
+      </div>
+    </AuthProvider>
+    </ErrorBoundary>
+  );
+}
 
 export default App;
