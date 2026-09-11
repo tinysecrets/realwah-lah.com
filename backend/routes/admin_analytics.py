@@ -34,6 +34,8 @@ async def get_admin_user(request: Request, db):
             raise HTTPException(status_code=403, detail="Admin access required")
         
         return user
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
 
