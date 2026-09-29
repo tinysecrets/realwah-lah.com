@@ -501,7 +501,7 @@ const Dashboard = () => {
             </button>
             {user?.role === "admin" && (
               <>
-                <button data-testid="nav-boss-mode-btn" className="btn-icon boss-mode-nav" onClick={() => navigate("/boss")} title="Boss Mode — summon the Genie">
+                <button data-testid="nav-boss-mode-btn" className="btn-icon boss-mode-nav" onClick={() => navigate("/boss")} title="GENIE — personal command center">
                   <Wand2 size={20} />
                 </button>
                 <button data-testid="nav-nerve-center-btn" className="btn-icon" onClick={() => navigate("/admin/nerve-center")} title="Nerve Center" style={{ color: "#3aff9c" }}>

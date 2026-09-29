@@ -22,7 +22,7 @@ const QUICK_ASKS = [
 
 const BossMode = () => {
   const nav = useNavigate();
-  const [sessionId, setSessionId] = useState(null);
+  const [sessionId, setSessionId] = useState(() => localStorage.getItem("wl_boss_session") || null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -33,6 +33,7 @@ const BossMode = () => {
     () => localStorage.getItem("wl_boss_provider") || ""
   );
   const [showSwitcher, setShowSwitcher] = useState(false);
+  const [voiceReplies, setVoiceReplies] = useState(() => localStorage.getItem("wl_boss_voice_replies") === "on");
   const endRef = useRef(null);
   const recognitionRef = useRef(null);
 
@@ -60,19 +61,42 @@ const BossMode = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Kick a fresh session on mount
+  // Restore the last conversation when possible; new sessions are explicit.
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await axios.post(`${API}/boss/new-session`);
-        setSessionId(data.session_id);
-        setMessages([{
+        if (!sessionId) {
+          const { data } = await axios.post(`${API}/boss/new-session`);
+          setSessionId(data.session_id);
+          localStorage.setItem("wl_boss_session", data.session_id);
+          setMessages([{
+            role: "assistant",
+            content: "**At your service, Boss.**\n\nI'm the Wah-Lah Genie. Ask, and I'll handle it — users, payouts, flags, pool, compliance, logs. Or hand me a mission and I'll build the plan.",
+            tool_trace: [],
+          }]);
+          return;
+        }
+        const { data } = await axios.get(`${API}/boss/history/${sessionId}`);
+        const restored = (data.messages || []).map((m) => ({
+          role: m.role,
+          content: m.content,
+          tool_trace: m.tool_trace || [],
+          provider: m.provider,
+          model: m.model,
+        }));
+        setMessages(restored.length ? restored : [{
           role: "assistant",
-          content: "**At your service, Boss.**\n\nI'm the Wah-Lah Genie. Ask, and I'll handle it — users, payouts, flags, pool, compliance, logs. Or hand me a mission and I'll build the plan.",
+          content: "**Welcome back, Boss.** The lamp is still lit. What's the move?",
           tool_trace: [],
         }]);
       } catch (e) {
-        setMessages([{ role: "assistant", content: "Couldn't open a session. Are you logged in as admin?", tool_trace: [] }]);
+        localStorage.removeItem("wl_boss_session");
+        setSessionId(null);
+        setMessages([{
+          role: "assistant",
+          content: "The lamp lost the old thread. I'll open a fresh one.",
+          tool_trace: [],
+        }]);
       }
     })();
   }, []);
@@ -128,8 +152,18 @@ const BossMode = () => {
         message: text,
         provider: chosenProvider || undefined,
       });
-      if (data.session_id && !sessionId) setSessionId(data.session_id);
+      if (data.session_id && data.session_id !== sessionId) {
+        setSessionId(data.session_id);
+        localStorage.setItem("wl_boss_session", data.session_id);
+      }
       if (data.provider) setBrain({ provider: data.provider, model: data.model });
+      if (voiceReplies && data.reply && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(data.reply);
+        utterance.rate = 1.02;
+        utterance.pitch = 1;
+        window.speechSynthesis.speak(utterance);
+      }
       setMessages((m) => [...m, {
         role: "assistant",
         content: data.reply,
@@ -152,6 +186,7 @@ const BossMode = () => {
     try {
       const { data } = await axios.post(`${API}/boss/new-session`);
       setSessionId(data.session_id);
+      localStorage.setItem("wl_boss_session", data.session_id);
       setMessages([{
         role: "assistant",
         content: "**Clean slate, Boss.** What's the move?",
@@ -200,8 +235,8 @@ const BossMode = () => {
         <div className="boss-title">
           <Wand2 size={22} className="boss-title-icon" />
           <div>
-            <h1>Boss Mode</h1>
-            <span>The Genie · at your command</span>
+            <h1>GENIE</h1>
+            <span>Your Wah-Lah command center · always listening</span>
           </div>
         </div>
         {(brain || providers.length > 0) && (
@@ -263,6 +298,19 @@ const BossMode = () => {
             )}
           </div>
         )}
+        <button
+          className={`boss-voice-replies ${voiceReplies ? "is-on" : ""}`}
+          type="button"
+          onClick={() => {
+            const next = !voiceReplies;
+            setVoiceReplies(next);
+            localStorage.setItem("wl_boss_voice_replies", next ? "on" : "off");
+          }}
+          title={voiceReplies ? "Voice replies on" : "Voice replies off"}
+          data-testid="boss-voice-replies"
+        >
+          {voiceReplies ? "🔊 Voice on" : "🔈 Voice off"}
+        </button>
         <button className="boss-new" onClick={newSession} data-testid="boss-new-session">
           <RefreshCw size={14} /> New mission
         </button>
@@ -270,6 +318,15 @@ const BossMode = () => {
 
       <div className="boss-chat-wrap">
         <aside className="boss-genie-pane" aria-hidden="true">
+          <div className="boss-lamp-stage">
+            <img
+              src="/mascots/genie_lamp_static.png"
+              alt=""
+              className="boss-lamp-art"
+              onError={(e) => { e.target.style.display = "none"; }}
+            />
+            <div className="boss-lamp-glow" />
+          </div>
           <img
             src="/mascots/genie_hero.png"
             alt=""
