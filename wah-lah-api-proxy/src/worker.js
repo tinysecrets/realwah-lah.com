@@ -9,6 +9,7 @@
  *  - Baseline security headers are stamped on every response.
  */
 const DEFAULT_TARGET = "https://realwah-lah-com-8v2l.onrender.com";
+const STRIPE_WEBHOOK_TARGET = "https://zero-gravity-smoky.vercel.app";
 
 const ALLOWED_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]);
 
@@ -52,7 +53,13 @@ export default {
       return json(405, { error: "Method not allowed" });
     }
 
-    const targetHost = ((env && env.PROD_TARGET) || DEFAULT_TARGET).replace(/\/+$/, "");
+    // Stripe's live endpoint is still the public WAH-LAH API URL. Route only
+    // the Stripe webhook path to the Zero Gravity payment handler; all other
+    // WAH-LAH API traffic remains on the Render backend.
+    const targetHost = (url.pathname === "/api/webhook/stripe"
+      ? STRIPE_WEBHOOK_TARGET
+      : ((env && env.PROD_TARGET) || DEFAULT_TARGET)
+    ).replace(/\/+$/, "");
     if (!/^https:\/\//i.test(targetHost)) {
       // Never proxy to a non-TLS backend.
       return json(502, { error: "Backend temporarily unavailable" });
