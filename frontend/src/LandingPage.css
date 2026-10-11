@@ -823,6 +823,8 @@
   letter-spacing: .03em;
 }
 .lp-footer-tagline { color: var(--ink-muted); font-size: 13px; margin: 4px 0 0; font-style: italic; }
+.lp-footer-owner { color: var(--ink-soft); font-size: 12px; margin: 10px 0 0; letter-spacing: .02em; }
+.lp-footer-company { color: var(--gold); font-size: 11px; margin: 0; letter-spacing: .14em; text-transform: uppercase; }
 .lp-footer-links {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
 }

@@ -712,6 +712,8 @@ const LandingPage = () => {
             <Sparkles size={24} className="lp-footer-icon" />
             <span className="lp-footer-name">WAH-LAH</span>
             <p className="lp-footer-tagline">The magic reveal · Premium sweepstakes</p>
+            <p className="lp-footer-owner">Founded and operated by Justin Smith</p>
+            <p className="lp-footer-company">A Wala Industries company</p>
           </div>
           <div className="lp-footer-links">
             <div className="lp-footer-col">
