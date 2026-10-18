@@ -8,6 +8,8 @@ Run the backend unit suite against explicit local-only configuration and a dispo
 
 Start the API only on `127.0.0.1` with an isolated database name. Seed synthetic users with test-only credentials. Disable background pool reconciliation/resync/rebalancing and external notifications. Use fake provider clients or test-mode credentials. Never use production to exercise payouts, pool transfers, outreach, or webhook retries.
 
+The optional `WAH_LAH_ISOLATED_TEST_DB=1` pytest fixture resets only the `login_attempts` collection between tests to isolate synthetic account-lockout state. It refuses to run unless `MONGO_URL` resolves to loopback and `DB_NAME` starts with `wahlah_release_gate_`. Leave it unset for ordinary test runs; it must never target a hosted database.
+
 ## Release gate
 
 1. Run the backend test suite and any required frontend tests/build with lockfile-based dependencies.
