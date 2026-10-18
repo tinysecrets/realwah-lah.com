@@ -17,6 +17,7 @@ SELF_CONTAINED_FILES = {
     "test_public_stats.py",
     "test_money_feed.py",
     "test_concierge.py",
+    "test_distributor_admin_dates.py",
 }
 
 

@@ -18,7 +18,7 @@ All routes are admin-only. Money-moving routes are idempotent.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from bson import ObjectId
@@ -284,7 +284,6 @@ def build_distributor_admin_router(db, get_admin_user) -> APIRouter:
     async def admin_stats(request: Request):
         await get_admin_user(request)
         today = datetime.now(timezone.utc).date().isoformat()
-        week_ago = (datetime.now(timezone.utc).date().isoformat())  # day-granular; see below
 
         async def _count(coll: str, query: Dict[str, Any]) -> int:
             try:
@@ -300,15 +299,15 @@ def build_distributor_admin_router(db, get_admin_user) -> APIRouter:
 
         users_total = await _count("users", {})
         new_users = sum(1 for u in await _since_today("users")
-                        if (u.get("created_at") or "") >= week_ago and _within_days(u.get("created_at"), 7))
+                        if _within_days(u.get("created_at"), 7))
 
         btc_today = [d for d in await _since_today("btc_deposits")
-                     if (d.get("created_at") or "") >= today]
+                     if _created_at_day(d.get("created_at")) == today]
         manual_today = [d for d in await _since_today("manual_deposits")
-                        if (d.get("created_at") or "") >= today]
+                        if _created_at_day(d.get("created_at")) == today]
         fees_today = sum(float(r.get("fee_usd") or 0)
                          for r in await _since_today("revenue_ledger")
-                         if (r.get("created_at") or "") >= today)
+                         if _created_at_day(r.get("created_at")) == today)
 
         mode = "auto"
         try:
@@ -343,14 +342,33 @@ def build_distributor_admin_router(db, get_admin_user) -> APIRouter:
     return router
 
 
-def _within_days(created_at: Optional[str], days: int) -> bool:
-    try:
-        dt = datetime.fromisoformat(created_at or "")
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return (datetime.now(timezone.utc) - dt).days < days
-    except (ValueError, TypeError):
+def _created_at_datetime(created_at: Any) -> Optional[datetime]:
+    """Normalize legacy ISO strings and native Mongo datetimes to UTC."""
+    if isinstance(created_at, datetime):
+        dt = created_at
+    elif isinstance(created_at, str):
+        try:
+            dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    else:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _created_at_day(created_at: Any) -> str:
+    dt = _created_at_datetime(created_at)
+    return dt.date().isoformat() if dt else ""
+
+
+def _within_days(created_at: Any, days: int) -> bool:
+    dt = _created_at_datetime(created_at)
+    if dt is None:
         return False
+    age = datetime.now(timezone.utc) - dt
+    return timedelta(0) <= age < timedelta(days=days)
 
 
 # NOTE: transaction normalization lives in services/money_feed.py — the single

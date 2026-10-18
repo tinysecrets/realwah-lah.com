@@ -217,30 +217,39 @@ class TestAdmin:
         # non-admin
         r = s.get(f"{API}/admin/users", timeout=10)
         assert r.status_code in (401, 403)
-        # admin
+        # Admin listing is intentionally paginated.
         r2 = admin_client.get(f"{API}/admin/users", timeout=10)
         assert r2.status_code == 200
-        assert isinstance(r2.json(), list)
+        body = r2.json()
+        assert isinstance(body, dict)
+        assert isinstance(body.get("users"), list)
+        assert isinstance(body.get("total"), int)
+        assert body.get("limit", 0) > 0
 
     def test_admin_stats(self, admin_client):
         r = admin_client.get(f"{API}/admin/stats", timeout=15)
         assert r.status_code == 200
         body = r.json()
-        # Should contain counts
-        assert any(k in body for k in ("total_users", "users", "user_count")), f"stats: {body}"
-        assert any(k in body for k in ("total_transactions", "transactions", "transaction_count")), f"stats: {body}"
+        # Contract exposes grouped counts and queue metrics.
+        assert isinstance(body.get("users"), dict)
+        assert isinstance(body["users"].get("total"), int)
+        assert isinstance(body.get("deposits_today"), dict)
+        assert isinstance(body.get("distribution"), dict)
+        assert isinstance(body.get("queues"), dict)
 
     def test_p2p_transfer_graceful_503_when_bridge_offline(self, admin_client):
-        """Bridge must be offline in this pod (no chromium). Endpoint must NOT 500."""
+        """The empty disposable proxy pool must not trigger a live transfer or 500."""
         r = admin_client.post(
-            f"{API}/admin/p2p-transfer",
-            json={"user_id": "000000000000000000000000", "platform_id": "demo", "player_id": "demo", "amount": 1},
+            f"{API}/ext/pool/admin/transfer",
+            json={"user_id": "000000000000000000000000", "platform": "demo", "recipient_username": "release-test-placeholder", "amount": 1},
             timeout=20,
         )
         # 503 = bridge offline (expected). 400/404 also acceptable if it validates first.
         # Critical: must NOT be 500.
         assert r.status_code != 500, f"P2P endpoint crashed: {r.status_code} {r.text}"
-        assert r.status_code in (400, 401, 403, 404, 503), f"Unexpected p2p code: {r.status_code} {r.text}"
+        assert r.status_code in (200, 400, 401, 403, 404, 503), f"Unexpected p2p code: {r.status_code} {r.text}"
+        if r.status_code == 200:
+            assert r.json().get("ok") is False, "test database must not execute a real transfer"
 
 
 # ---------- Sub-routers loaded (not 404) ----------

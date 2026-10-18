@@ -297,6 +297,12 @@ async def _admin_audit_log(request: Request, call_next):
             logger.exception("Admin audit log write failed.")
     return response
 
+@api_router.get("/")
+async def api_root():
+    """Small API root response for health checks and deployment verification."""
+    return {"message": "WAH-LAH API", "service": "wah-lah"}
+
+
 @api_router.get("/health")
 async def health():
     """Liveness check endpoint (never blocks on MongoDB)."""
@@ -919,6 +925,18 @@ async def onduty_status():
     if _on_duty is None or not _on_duty.last_report:
         return {"ok": None, "time": None, "note": "Watchdog not yet run"}
     return _on_duty.last_report
+
+
+@api_router.get("/currency/balance")
+async def get_currency_balance(request: Request):
+    """Read the authenticated user's dual-currency balance."""
+    user = await get_current_user(request)
+    if not currency_service:
+        raise HTTPException(status_code=503, detail="Currency service not initialized")
+    balance = await currency_service.get_user_balance(user["id"])
+    if balance is None:
+        raise HTTPException(status_code=404, detail="User balance not found")
+    return balance
 
 
 @api_router.post("/amoe/claim-daily")
