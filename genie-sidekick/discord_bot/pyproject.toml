@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wah-lah-genie-discord-bot"
+version = "0.1.0"
+description = "Private Discord DM bridge for the Wah-Lah Genie API"
+requires-python = ">=3.10"
+dependencies = [
+  "discord.py==2.4.0",
+  "httpx==0.27.0",
+  "python-dotenv==1.0.1",
+]
+
+[project.scripts]
+discord-bot = "discord_bot:main"
+
+[tool.setuptools]
+py-modules = ["discord_bot"]
