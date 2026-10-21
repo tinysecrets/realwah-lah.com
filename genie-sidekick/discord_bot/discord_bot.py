@@ -12,13 +12,11 @@ Setup (5 min):
 3. Set env vars in a .env file next to this script:
        DISCORD_BOT_TOKEN=...
        GENIE_API_URL=https://genie.wah-lah.com
-       GENIE_ADMIN_EMAIL=REDACTED_EMAIL
+       GENIE_ADMIN_EMAIL=...
        GENIE_ADMIN_PASSWORD=...your password...
        ALLOWED_DISCORD_USER_IDS=123456789  (comma-separated; only YOU can chat)
 4. Run: pip install -r requirements.txt && python discord_bot.py
-   Or deploy as a tiny Fly app — see Dockerfile in this folder.
-
-The bot DMs Genie when you DM it. Group chats are ignored (this is YOUR sidekick).
+   Or install the package and run the `discord-bot` console command.
 """
 
 import asyncio
@@ -87,7 +85,7 @@ async def chat_with_genie(message: str, session_id: Optional[str]) -> dict:
 
 @bot.event
 async def on_ready():
-    log.info(f"Logged in as {bot.user} (id={bot.user.id})")
+    log.info("Logged in as %s (id=%s)", bot.user, bot.user.id)
 
 
 @bot.event
@@ -97,7 +95,7 @@ async def on_message(msg: discord.Message):
     if not isinstance(msg.channel, discord.DMChannel):
         return  # only DMs
     if ALLOWED_USERS and msg.author.id not in ALLOWED_USERS:
-        await msg.channel.send("🪔 Sorry, this Genie only answers to its Boss.")
+        await msg.channel.send("Sorry, this Genie only answers to its Boss.")
         return
 
     async with msg.channel.typing():
@@ -106,13 +104,17 @@ async def on_message(msg: discord.Message):
             data = await chat_with_genie(msg.content, session_id)
             session_per_user[msg.author.id] = data["session_id"]
             reply = data.get("reply") or "…"
-            # Discord max 2000 chars per message
             for i in range(0, len(reply), 1900):
                 await msg.channel.send(reply[i : i + 1900])
         except Exception as exc:
             log.exception("chat failed")
-            await msg.channel.send(f"⚠️ Genie tripped: `{exc}`")
+            await msg.channel.send(f"Genie tripped: `{exc}`")
+
+
+def main() -> None:
+    """Console-script entrypoint used by installed deployments."""
+    bot.run(DISCORD_TOKEN)
 
 
 if __name__ == "__main__":
-    bot.run(DISCORD_TOKEN)
+    main()
